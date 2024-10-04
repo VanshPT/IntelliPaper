@@ -798,3 +798,5 @@ def expand_query(query):
     expanded_terms.update(phrases)
     
     return list(expanded_terms)
+
+# RAG Chatbot to aid in mentoring, doubt solving trained on a users papers
