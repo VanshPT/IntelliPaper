@@ -251,4 +251,4 @@ This snippet shows the functions used for expanding the query by:
 
 ---
 
-For further details on the **hybrid ranking algorithm** and **query expansion**, refer to our [Search Engine Documentation](search_engine.md).
+For further details on the **hybrid ranking algorithm** and **query expansion**, refer to our [Search Engine Documentation](SEARCH_ENGINE.md).
