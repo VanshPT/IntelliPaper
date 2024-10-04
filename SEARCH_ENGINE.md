@@ -1,5 +1,3 @@
-Sure! Below is a detailed documentation plus research article-style explanation for how IR systems are built, with emphasis on the steps we've implemented in IntelliPaper's search engine. It follows a structured approach that resembles a technical documentation and research write-up.
-
 ---
 
 # 📖 Search Engine: Detailed Documentation and Implementation Guide
