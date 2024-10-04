@@ -20,7 +20,7 @@ IntelliPaper is a powerful web application designed for individuals who regularl
 
 - **🤖 RAG-Based Chatbot:** Ask questions about your saved papers! (This feature is currently under construction.)
 
-- **🔍 Custom Search Engine:** A robust search engine built from scratch that retrieves research papers based on contextual relevance, using advanced NLP and IR systems. Our search algorithm ranks papers based on a hybrid approach using BM25 and Cosine Similarity to ensure the best results for your query. For more details, check out our Search Engine Documentation! 🚀
+- **🔍 Custom Search Engine:** A robust search engine built from scratch that retrieves research papers based on contextual relevance, using advanced NLP and IR systems. Our search algorithm ranks papers based on a hybrid approach using BM25 and Cosine Similarity to ensure the best results for your query. For more details, check out our Search Engine Documentation! 🚀 refer to our [Search Engine Documentation](SEARCH_ENGINE.md).
 
 ---
 

@@ -776,7 +776,7 @@ def search_engine(request):
         ranked_indices = np.argsort(combined_scores)[::-1]
         ranked_papers = [papers[int(i)] for i in ranked_indices]
         
-        paginator = Paginator(ranked_papers, 2)  # 10 results per page
+        paginator = Paginator(ranked_papers, 10)
         page_number = request.GET.get('page')
         paginated_papers = paginator.get_page(page_number)
 
