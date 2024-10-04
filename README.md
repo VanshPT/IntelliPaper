@@ -20,9 +20,7 @@ IntelliPaper is a powerful web application designed for individuals who regularl
 
 - **🤖 RAG-Based Chatbot:** Ask questions about your saved papers! (This feature is currently under construction.)
 
-- **🔍 Custom Search Engine:** Although still in development, our custom search engine leverages NLP and IR concepts to enhance paper retrieval.
-
-In short, IntelliPaper revolutionizes how you read academic papers, making it a seamless and productive experience! 🚀
+- **🔍 Custom Search Engine:** A robust search engine built from scratch that retrieves research papers based on contextual relevance, using advanced NLP and IR systems. Our search algorithm ranks papers based on a hybrid approach using BM25 and Cosine Similarity to ensure the best results for your query. For more details, check out our Search Engine Documentation! 🚀
 
 ---
 
@@ -80,8 +78,21 @@ To run IntelliPaper locally, follow these steps:
    ```bash
    python manage.py createsuperuser
    ```
-
-7. **Start the Development Server:**
+   
+7. **(Search Engine setup) uncomment all lines in views.py and helper.py with syntax nltk.download(*) when using the search engine for the first time. After all resources are downloaded once in your system for 'punkt_tab' and 'wordnet':**
+   This (example)
+   ```bash
+   # nltk.download('wordnet') UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
+   # nltk.download('punkt_tab') UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
+   ```
+   to this (comment all such lines in both files after resources are downloaded once for your search engine to work properly)
+   ```bash
+   nltk.download('wordnet')
+   nltk.download('punkt_tab')
+   ```
+8. **Again Comment out all lines with syntax nltk.download(*) after all resources are downloaded in system.(Important)**
+   
+9. **Start the Development Server:**
    ```bash
    python manage.py runserver
    ```
@@ -94,7 +105,7 @@ Now you're ready to enjoy IntelliPaper! 🎉
 
 - **Natural Language Processing (NLP):** Employed for metadata extraction and content analysis.
 - **Information Retrieval (IR):** Utilized in the custom search engine for effective paper querying.
-- **BERT Embeddings:** Used to generate context-aware vectors for better clustering of papers.
+- **BERT based Embeddings:** Used to generate context-aware vectors for better clustering of papers.
 - **Agglomerative Clustering:** Machine learning algorithm for clustering research papers into coherent groups.
 
 ---
