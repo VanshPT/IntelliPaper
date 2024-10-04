@@ -1,0 +1,159 @@
+{% extends 'home/dashboard.html' %}
+{% block title %}PDF Notes - {{ paper.title }}{% endblock %}
+{% block upload %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block auto_clustering %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block explore_topics %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block history %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% load static %}
+{% block css %}
+<style>
+   #view-paper-outside-box{
+    margin:20px;
+    overflow-y: auto;
+   }
+   .margg-20{
+    margin-bottom:20px;
+    margin-right:20px;
+   }
+   .custt-flex{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+   }
+   .custom-cluster-button{
+    background: #ff7f50;
+    padding: 10px;
+    border-radius: 10px;
+    color: white;
+    font-weight:bold;
+    margin:20px;
+}
+.custom-cluster-button:hover{
+    background: #f36a1b;
+}
+.seperator{
+    border: 1px solid #0f172a;
+    margin: 20px 5rem;
+}
+#summary-box{
+    margin: 20px;
+}
+.custt-flex {
+    display: flex;
+    gap: 20px; /* Space between buttons */
+}
+.custt-flex1 {
+    display: flex;
+    gap: 20px; /* Space between buttons */
+}
+@media (max-width: 768px) {
+    .custt-flex1 {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+.square-button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 50px; /* Width of the square button */
+    height: 50px; /* Height of the square button */
+    background-color: #ff7f50; /* Background color */
+    border-radius: 8px; /* Rounded edges */
+    color: white; /* Icon color */
+    text-decoration: none; /* Remove underline */
+    transition: background-color 0.3s; /* Smooth transition for hover effect */
+}
+
+.square-button:hover {
+    background-color: #f36a1b; /* Darker orange on hover */
+}
+
+.icon {
+    width: 24px; /* Width of the SVG icon */
+    height: 24px; /* Height of the SVG icon */
+}
+
+#notes-editor-container {
+    margin: 20px;
+}
+
+#save-notes-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#save-notes-button:hover {
+    background-color: #45a049;
+}
+.custt-link{
+    color: #ff7f50;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="view-paper-outside-box">
+    <div class="custt-flex">
+        <h3 class="text-3xl font-medium text-gray-700 margg-20"><b>Notes</b></h3>
+        <a class="custt-link" href="/view_pdf/{{ paper.id }}">View Paper</a>
+    </div>
+    <div class="custt-flex">
+        <h3 class="text-xl font-medium text-gray-700 margg-20"><b>Title: </b>{{ paper.title }}</h3>
+        <div class="custt-flex1">
+            <a class="square-button margg-20" href="{{ paper.pdf_file.url }}">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="icon">
+                    <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 242.7-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7 288 32zM64 352c-35.3 0-64 28.7-64 64l0 32c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-32c0-35.3-28.7-64-64-64l-101.5 0-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352 64 352zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/>
+                </svg>
+            </a>
+            <a class="square-button margg-20" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon">
+                    <path d="M64 80c-8.8 0-16 7.2-16 16l0 320c0 8.8 7.2 16 16 16l224 0 0-80c0-17.7 14.3-32 32-32l80 0 0-224c0-8.8-7.2-16-16-16L64 80zM288 480L64 480c-35.3 0-64-28.7-64-64L0 96C0 60.7 28.7 32 64 32l320 0c35.3 0 64 28.7 64 64l0 224 0 5.5c0 17-6.7 33.3-18.7 45.3l-90.5 90.5c-12 12-28.3 18.7-45.3 18.7l-5.5 0z"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+    <h5 class="font-medium text-gray-700 margg-20"><b>Authors: </b>{{ paper.authors }}</h5>
+
+    <!-- Notes Section -->
+    <div id="notes-editor-container">
+        <form id="notes-form" action="/save_notes/{{ user.username }}/{{ paper.id }}/" method="POST">
+            {% csrf_token %}
+            <textarea id="notes-editor" name="notes">{{ notes }}</textarea>
+            <br>
+            <button id="save-notes-button" type="submit">Save Notes</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="https://cdn.tiny.cloud/1/{{ tiny_api }}/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+      selector: 'textarea',
+      plugins: [
+        // Core editing features
+        'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+        // Your account includes a free trial of TinyMCE premium features
+        // Try the most popular premium features until Oct 17, 2024:
+        'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 'ai', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown',
+      ],
+      toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+      tinycomments_mode: 'embedded',
+      tinycomments_author: 'Author name',
+      mergetags_list: [
+        { value: 'First.Name', title: 'First Name' },
+        { value: 'Email', title: 'Email' },
+      ],
+      ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
+    });
+  </script>
+
+{% endblock %}

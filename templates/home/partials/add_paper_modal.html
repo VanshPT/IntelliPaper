@@ -1,0 +1,38 @@
+<!-- Modal -->
+<div class="modal fade" id="add-paper-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="addPaperModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content modal-custom">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="addPaperModalLabel">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
+                        <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/>
+                        <path d="M8 4a.5.5 0 0 1 .5.5V7h2.5a.5.5 0 0 1 0 1H8.5v2.5a.5.5 0 0 1-1 0V8H5a.5.5 0 0 1 0-1h2.5V4.5A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                    Add Research Papers
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form action="/explore_topics/{{ user.username }}/save_papers/" method="post" id="add-papers-form">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        {% for paper in papers %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="{{ paper.id }}" id="paper-{{ paper.id }}" name="papers">
+                            <label class="form-check-label" for="paper-{{ paper.id }}">
+                                {{ paper.title }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" id="readlist_id" name="readlist_id" value="{{ readlist.id }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn custom-add-paper-button">Add Papers</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

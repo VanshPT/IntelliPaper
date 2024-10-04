@@ -1,0 +1,107 @@
+{% extends 'home/dashboard.html' %}
+{% block title %}Readlists{% endblock %}
+{% block upload %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block auto_clustering %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block explore_topics %}text-gray-100 bg-gray-700 bg-opacity-25{% endblock %}
+{% block history %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% load static %}
+{% block css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+<link href="{% static "/home/explore_topics.css" %}" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+<div style="overflow-y: auto;">
+<div class="readlists-section">
+    <!-- Title and Create Readlist Button -->
+    <div class="readlists-header">
+        <h3 class="text-3xl font-medium text-gray-700">Readlists</h3>
+    </div>
+    <span id="proto-note">Note - This is a prototype, using free resources, hence sleep phases introduced between Gemini API to get proper output</span>
+    <div class="folder-grid">
+
+ 
+        <div class="create-folder">
+            <a href="/auto_cluster/{{ user.username }}/{{ folder.id }}/" class="create-folder-box">
+                <div class="folder-svg">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 5C12.5523 5 13 5.44772 13 6V11H18C18.5523 11 19 11.4477 19 12C19 12.5523 18.5523 13 18 13H13V18C13 18.5523 12.5523 19 12 19C11.4477 19 11 18.5523 11 18V13H6C5.44772 13 5 12.5523 5 12C5 11.4477 5.44772 11 6 11H11V6C11 5.44772 11.4477 5 12 5Z" fill="rgba(255, 255, 255, 0.8)" />
+                    </svg>                    
+                </div>
+                <div class="folder-name">Create New Readlist</div>
+            </a>
+        </div>
+        {% for readlist in readlists %}
+        <div class="folder-container folder-box">
+            <a href="/explore_topics/{{ user.username }}/{{ readlist.id }}/">
+                <div class="folder-svg">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 4L2 4C0.89543 4 0 4.89543 0 6V18C0 19.1046 0.89543 20 2 20H22C23.1046 20 24 19.1046 24 18V8C24 6.89543 23.1046 6 22 6H12L10 4Z" fill="rgba(255, 255, 255, 0.8)" />
+                    </svg>
+                </div>
+            </a>
+            <div class="folder-name">{{ readlist.name }}</div>
+        </div>
+        {% endfor %}
+        <div id="temp-folder">
+        </div>
+    </div>
+    <span class="normal-note">Refresh after creating a new Readlist to open it</span>
+  
+</div>
+<div class="readlists-header">
+    <h3 class="text-3xl font-medium text-gray-700">All Uploaded Papers</h3>
+</div>
+<div class="flex flex-col mt-8">
+    <div class="py-2 -my-2 overflow-x-auto sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <!-- Add max-height to limit visible height, and make it scrollable -->
+        <div class="inline-block min-w-full overflow-hidden align-middle border-b border-gray-200 shadow sm:rounded-lg table-wrapper" style="max-height: 400px; overflow-y: auto;">
+            <table class="min-w-full">
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 text-xs font-bold leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">Title</th>
+                        <th class="px-6 py-3 text-xs font-normal leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">Abstract</th>
+                        <th class="px-6 py-3 text-xs font-normal leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">Author</th>
+                        <th class="px-6 py-3 text-xs font-normal leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">Details</th>
+                        <th class="px-6 py-3 text-xs font-normal leading-4 tracking-wider text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">Delete</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white">
+                    {% for paper in research_papers %}
+                    <tr id="id-of-paper-saved-under-this-user">
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <span class="text-sm font-medium leading-5 text-gray-900">{{ paper.title|truncatechars:20 }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <span class="text-sm leading-5 text-gray-500">{{ paper.abstract|truncatechars:50 }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <span class="text-sm leading-5 text-gray-900">{{ paper.authors }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <a href="/view_pdf/{{paper.id}}/" class="text-indigo-600 hover:text-indigo-900">View</a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
+                            <button type="button" data-bs-toggle="modal" data-bs-target="#staticBackdrop1-{{ paper.id }}">
+                                <svg class="delete-icon-custom" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                                    <path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/>
+                                </svg>
+                            </button>
+                            {% include "home/partials/delete_modal1.html" %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+
+{% block js %}
+<script src="{% static '/home/explore_topics.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></s>
+{% endblock %}

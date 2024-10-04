@@ -1,0 +1,108 @@
+{% extends 'home/dashboard.html' %}
+{% block title %}Auto Cluster{% endblock %}
+{% block upload %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block auto_clustering %}text-gray-100 bg-gray-700 bg-opacity-25{% endblock %}
+{% block explore_topics %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block history %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block css %}
+<style>
+    body {
+        background-color: #0f172a;
+        color: #ffffff;
+    }
+    .folder-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        margin: 20px;
+    }
+    .folder-container {
+        display: inline-block;
+        width: 48%; /* Max 2 folders in one line */
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .folder-box {
+        display: block;
+        padding: 20px;
+        background-color: rgba(30, 41, 59, 0.8); /* Darkish transparent background */
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        text-decoration: none;
+        color: white;
+        transition: transform 0.3s ease, background-color 0.3s ease;
+    }
+    .folder-box:hover {
+        background-color: rgba(30, 41, 59, 1); /* Darker on hover */
+        transform: translateY(-5px);
+    }
+    .folder-svg {
+        width: 60px; /* Adjust size for narrower width */
+        height: 60px;
+        margin: 0 auto 10px auto;
+    }
+    .folder-svg svg {
+        width: 100%;
+        height: 100%;
+        fill: #ff7f50;
+    }
+    .folder-name {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    .cluster-button {
+        margin: 20px;
+    }
+    .custom-cluster-button{
+        background: #ff7f50;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    .custom-cluster-button:hover{
+        background: #f36a1b;
+    }
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .folder-container {
+            width: 100%; /* Full width on smaller screens (1 folder per line) */
+        }
+    }
+    #proto-note{
+        color: #ff7f50;
+        margin-left:20px;
+        padding:2px;
+        border-radius:5px;
+    }
+</style>
+{% endblock %}
+{% block body %}
+{% comment %} edit below content to make a new page, keep rest contents same, to make the second ex- auto clustering link active, add the text-gray-100... classes of upload to auto clustering and add text-gray-500... classes to rest link blocks  {% endcomment %}
+<div class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
+<div class="cluster-button">
+    <a href="/auto_cluster/{{ user.username }}/cluster/">
+    <button class="custom-cluster-button">
+        Form Clusters
+    </button>
+    </a>
+</div>
+<span id="proto-note">Note - This is a prototype, using free resources, hence sleep phases introduced between Gemini API to get proper output</span>
+<div class="folder-grid">
+
+    {% for folder in folders %}
+    <div class="folder-container">
+        <a href="/auto_cluster/{{ user.username }}/{{ folder.id }}/" class="folder-box">
+            <div class="folder-svg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 4L2 4C0.89543 4 0 4.89543 0 6V18C0 19.1046 0.89543 20 2 20H22C23.1046 20 24 19.1046 24 18V8C24 6.89543 23.1046 6 22 6H12L10 4Z" fill="rgba(255, 255, 255, 0.8)" />
+                </svg>
+            </div>
+            <div class="folder-name">{{ folder.name }}</div>
+        </a>
+    </div>
+    {% endfor %}
+    
+</div>
+</div>
+{% comment %} edit till here to make a new page  {% endcomment %}
+{% endblock %}
+{% block js %}{% endblock %}

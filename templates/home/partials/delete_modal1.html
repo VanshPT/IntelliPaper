@@ -1,0 +1,91 @@
+<!-- Modal -->
+<div class="modal fade" id="staticBackdrop1-{{ paper.id }}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content modal-custom">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="staticBackdropLabel">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-circle" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+              <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm.93-7.481a.5.5 0 0 1 .547.435l.007.09v4.5a.5.5 0 0 1-.992.09l-.007-.09v-4.5a.5.5 0 0 1 .445-.524z"/>
+            </svg> 
+            Are you sure you want to delete this Research Paper?
+          </h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <span><strong>Paper:</strong> {{ paper.title }}</span>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <form action="/delete_paper1/{{ user.username }}/{{ paper.id }}" method="get">
+            <input type="hidden" value="{{ paper.id }}">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+  .modal-custom {
+    background-color: #1e293b;
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+  }
+  
+  .modal-header {
+    border-bottom: none;
+    text-align: center;
+  }
+  
+  .modal-header svg {
+    margin-right: 0.5rem;
+    color: #ff7f50;
+  }
+  
+  .modal-body {
+    text-align: center;
+    font-size: 1.1rem;
+  }
+  
+  .modal-footer {
+    border-top: none;
+    justify-content: center;
+  }
+  
+  .modal-footer .btn {
+    border-radius: 30px;
+    padding: 0.5rem 2rem;
+  }
+  
+  .btn-secondary {
+    background-color: #475569;
+    color: #ffffff;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #64748b;
+  }
+  
+  .btn-danger {
+    background-color: #ff7f50;
+    color: #ffffff;
+  }
+  
+  .btn-danger:hover {
+    background-color: #ff6347;
+  }
+  
+  .btn-close {
+    color: #ffffff;
+    opacity: 1;
+  }
+  
+  @media (max-width: 768px) {
+    .modal-custom {
+      width: 90%;
+    }
+  }
+  </style>
+  
