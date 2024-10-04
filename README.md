@@ -79,7 +79,12 @@ To run IntelliPaper locally, follow these steps:
    python manage.py createsuperuser
    ```
    
-7. **(Search Engine setup) uncomment all lines in views.py and helper.py with syntax nltk.download(*) when using the search engine for the first time. After all resources are downloaded once in your system for 'punkt_tab' and 'wordnet':**
+7. **Start the Development Server:**
+   ```bash
+   python manage.py runserver
+   ```
+   
+8. **(Search Engine setup) uncomment all lines in views.py and helper.py with syntax nltk.download(*) when using the search engine for the first time. After all resources are downloaded once in your system for 'punkt_tab' and 'wordnet'. To download these resources successffuly, use the search engine once. you will see the resources downloading in terminal, once both resources are installed only then safely you can comment out those lines again**
    This (example)
    ```bash
    # nltk.download('wordnet') UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
@@ -90,12 +95,9 @@ To run IntelliPaper locally, follow these steps:
    nltk.download('wordnet')
    nltk.download('punkt_tab')
    ```
-8. **Again Comment out all lines with syntax nltk.download(*) after all resources are downloaded in system.(Important)**
+9. **Again Comment out all lines with syntax nltk.download(*) after all resources are downloaded in system.(Important)**
    
-9. **Start the Development Server:**
-   ```bash
-   python manage.py runserver
-   ```
+
 
 Now you're ready to enjoy IntelliPaper! 🎉
 
