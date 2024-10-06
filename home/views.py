@@ -23,12 +23,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 import joblib
 import time
 import requests
-from threading import Timer
 from rank_bm25 import BM25Okapi
-from gensim.models import KeyedVectors
 from .helper import get_synonyms,get_contextual_terms, get_phrases
 import nltk
 from django.core.paginator import Paginator
+#below are imports for running async tasks
+from django_q.tasks import async_task
+
+
 
 # Set up logging for errors
 logger = logging.getLogger(__name__)
@@ -42,6 +44,7 @@ def landing(request):
 def render_dashboard(request, username):
     user = request.user
     latest_papers = ResearchPaper.objects.filter(user=user).order_by('-upload_datetime')[:8]
+    async_task('home.tasks.caught_username', user.username)
     context = {
         'username': user.username,
         'first_name': user.first_name,
@@ -431,12 +434,6 @@ def save_metadata_to_db(user, pdf_name, metadata, extracted_text):
         extracted_text=extracted_text
     )
     paper.save()
-
-    # Optional sleep if needed (you can adjust or remove this)
-    time.sleep(10)
-
-    # Schedule the API call to trigger auto-clustering after 2 minutes (120 seconds)
-    Timer(120, trigger_auto_clustering, args=[user.username]).start()
 
     
 @login_required

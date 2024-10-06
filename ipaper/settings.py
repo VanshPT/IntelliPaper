@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'authentication',
-    'home'
+    'home',
+    'django_q',
 ]
 
 MIDDLEWARE = [
@@ -147,3 +148,16 @@ SESSION_COOKIE_SECURE = True
 GEMINI_API_KEY=config('GEMINI_API_KEY')
 TINY_MCE_EDITOR=config('TINY_MCE_EDITOR')
 BASE_URL = 'http://127.0.0.1:8000'
+
+
+
+Q_CLUSTER = {
+    'name': 'DjangoQ',
+    'workers': 4,  # Set the number of workers based on your needs
+    'recycle': 500,
+    'timeout': 60,
+    'retry': 3600,
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',  # Use Django ORM for task storage
+}
