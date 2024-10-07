@@ -153,11 +153,11 @@ BASE_URL = 'http://127.0.0.1:8000'
 
 Q_CLUSTER = {
     'name': 'DjangoQ',
-    'workers': 4,  # Set the number of workers based on your needs
+    'workers': 8,  # Set the number of workers based on your needs
     'recycle': 500,
-    'timeout': 60,
-    'retry': 3600,
-    'queue_limit': 50,
+    'timeout': 10000,
+    'retry': 10002,
+    'queue_limit': 100,
     'bulk': 10,
     'orm': 'default',  # Use Django ORM for task storage
 }

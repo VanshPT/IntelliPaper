@@ -1,0 +1,19 @@
+<h1>ChromaDB Research Papers</h1>
+
+<h2>Collections:</h2>
+<ul>
+    {% for collection in collection_names %}
+        <li>{{ collection }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Research Papers:</h2>
+<ul>
+    {% for item in combined_data %}
+        <li>
+            <strong>ID:</strong> {{ item.id }} <br>
+            <strong>Document:</strong> {{ item.document }} <br>
+            <strong>Embedding:</strong> {{ item.embedding }} <br>
+        </li>
+    {% endfor %}
+</ul>

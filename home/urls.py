@@ -23,5 +23,6 @@ urlpatterns = [
     path('view_pdf/<int:id>/generate_summary/', views.generate_summary, name="generate_summary"),
     path('view_pdf/notes/<int:id>/', views.render_pdf_notes, name="render_pdf_notes"),
     path('save_notes/<str:username>/<int:paper_id>/', views.save_notes, name='save_notes'),
-    path('search/', views.search_engine, name="search")
+    path('search/', views.search_engine, name="search"),
+    path('view_chroma_data/', views.view_chroma_data, name="view_chroma_data"),
 ]
