@@ -33,19 +33,28 @@
       .custt-butt-color:hover{
         background: #f36a1b
       }
+      #message-popup {
+        background-color: #1e293b; /* Slightly lighter dark background */
+        color: #fff; /* White text */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Shadow effect */
+        z-index: 9999; /* Ensure it's always above other elements */
+    }
+    #message-popup.show {
+        opacity: 1; /* Visible when the 'show' class is added */
+        pointer-events: auto; /* Enable interactions */
+    }
+    #message-popup.hide {
+        opacity: 0; /* Fade out effect */
+        pointer-events: none; /* Disable interactions when hidden */
+    }
+    /* Cross icon hover effect */
+    #close-message:hover svg {
+        stroke: #ff7f50; /* Coral color on hover */
+    }
     </style>
     {% block css %} {% endblock %}
   </head>
   <body style="background: #edf2f7">
-    {% include 'partials/message_popup.html' %} {% if messages %}
-    <script>
-      // Display each message passed from Django views
-      {% for message in messages %}
-          showMessage("{{ message }}");
-      {% endfor %}
-    </script>
-    {% endif %}
-    <div>
       <script
         src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js"
         defer
@@ -390,6 +399,15 @@
               </div>
             </div>
           </header>
+          {% include 'partials/message_popup.html' %}
+    {% if messages %}
+    <script>
+        // Display each message passed from Django views
+        {% for message in messages %}
+            showMessage("{{ message }}");
+        {% endfor %}
+    </script>
+    {% endif %}
           {% block body %}{% endblock %}
         </div>
       </div>

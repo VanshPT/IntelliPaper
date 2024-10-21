@@ -15,6 +15,7 @@ urlpatterns = [
     path('explore_topics/<str:username>/<int:id>/delete_readlist/', views.delete_readlist, name="delete_readlist"),
     path('search_paper/<str:username>/', views.render_search_paper, name="render_search_paper"),
     path('assistant/<str:username>/', views.render_assistant, name="render_assistant"),
+    path('assistant/<str:username>/send_query', views.rag_assistant, name="rag_assistant"),
     path('extract_save_pdf/', views.extract_save_pdf, name="extract_save_pdf"),
     path('delete_paper/<str:username>/<int:id>/', views.delete_paper, name="render_history"),
     path('delete_paper1/<str:username>/<int:id>/', views.delete_paper1, name="render_history"),
@@ -24,5 +25,4 @@ urlpatterns = [
     path('view_pdf/notes/<int:id>/', views.render_pdf_notes, name="render_pdf_notes"),
     path('save_notes/<str:username>/<int:paper_id>/', views.save_notes, name='save_notes'),
     path('search/', views.search_engine, name="search"),
-    path('view_chroma_data/', views.view_chroma_data, name="view_chroma_data"),
 ]

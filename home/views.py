@@ -29,6 +29,7 @@ import nltk
 from django.core.paginator import Paginator
 import chromadb
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
+# from langchain_community.llms import Ollama
 #below are imports for running async tasks
 from django_q.tasks import async_task
 
@@ -39,7 +40,10 @@ logger = logging.getLogger(__name__)
 
 # Landing view
 def landing(request):
-    return render(request, 'home/landing/landing.html')
+    context = {}
+    if request.user.is_authenticated:
+        context['username'] = request.user.username
+    return render(request, 'home/landing/landing.html', context)
 
 
 @login_required
@@ -296,18 +300,6 @@ def render_assistant(request, username):
     }
     return render(request, 'home/assistant.html', context)
 
-@login_required
-def extract_save_pdf(request):
-    if request.method == "POST" and request.FILES.get('pdf_file'):
-        user = request.user
-        pdf_file = request.FILES['pdf_file']
-        file_path = default_storage.save(f"data/{pdf_file.name}", pdf_file)
-        perm_file_path = default_storage.save(f"pdfs/{pdf_file.name}", pdf_file)
-        absolute_file_path = os.path.join(settings.MEDIA_ROOT, file_path)
-        process_pdf(user,absolute_file_path, pdf_file.name)
-
-        return redirect(f"/dashboard/{user.username}")
-    return render(request, 'upload_pdf.html')
 
 
 
@@ -424,7 +416,7 @@ def trigger_auto_clustering(username):
 # Function to save the metadata and trigger auto-clustering after a delay
 def save_metadata_to_db(user, pdf_name, metadata, extracted_text):
     # Get the user instance
-    user_instance = User.objects.get(username=user.username)
+    user_instance = User.objects.get(username=user)
 
     # Save the research paper
     paper = ResearchPaper(
@@ -437,7 +429,21 @@ def save_metadata_to_db(user, pdf_name, metadata, extracted_text):
     )
     paper.save()
 
-    
+
+@login_required
+def extract_save_pdf(request):
+    if request.method == "POST" and request.FILES.get('pdf_file'):
+        user = request.user
+        pdf_file = request.FILES['pdf_file']
+        file_path = default_storage.save(f"data/{pdf_file.name}", pdf_file)
+        perm_file_path = default_storage.save(f"pdfs/{pdf_file.name}", pdf_file)
+        absolute_file_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        async_task(process_pdf, user.username, absolute_file_path, pdf_file.name)
+        messages.success(request, "Your paper is being processed and will be uploaded soon.")
+        return redirect(f"/dashboard/{user.username}")
+    return render(request, 'upload_pdf.html')
+
+
 @login_required
 def delete_paper(request, username, id):
     if request.user.username != username:
@@ -799,47 +805,9 @@ def expand_query(query):
     return list(expanded_terms)
 
 
-def view_chroma_data(request):
-    # Initialize ChromaDB client
-    chroma_client = chromadb.PersistentClient(
-        path=os.path.join(settings.BASE_DIR, 'chromadb_storage'),
-        settings=Settings(),
-        tenant=DEFAULT_TENANT,
-        database=DEFAULT_DATABASE,
-    )
+@login_required
+def rag_assistant(request, username):
+    if request.user:
+        user=request.user 
+        pass 
     
-    # Get all collection names
-    try:
-        collections = chroma_client.list_collections()
-        collection_names = [collection['name'] for collection in collections]
-
-        # Get a specific collection
-        collection_name = "research_papers"
-        collection = chroma_client.get_collection(name=collection_name)
-
-        # Retrieve all documents and embeddings from the collection
-        research_papers = collection.get()  # Fetch all research papers
-        combined_data = []
-
-        # Check each paper for existing embeddings
-        for paper_id in research_papers['ids']:
-            existing_embeddings = collection.get(ids=[paper_id])
-            combined_data.append({
-                'id': paper_id,
-                'document': existing_embeddings.get('documents', [])[0] if existing_embeddings.get('documents') else None,
-                'embedding': existing_embeddings.get('embeddings', [])[0] if existing_embeddings.get('embeddings') else None,
-            })
-
-    except Exception as e:
-        # Handle case where collection is not found or other errors
-        combined_data = []
-        collection_names = []
-        print(f"Error fetching collections or data: {str(e)}")
-
-    # Pass data to template
-    context = {
-        'combined_data': combined_data,
-        'collection_names': collection_names,
-    }
-
-    return render(request, 'home/chroma_data.html', context)

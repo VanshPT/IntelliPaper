@@ -5,8 +5,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import spacy
 import numpy as np
 
-# nltk.download('wordnet') UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
-# nltk.download('punkt_tab') UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
+# nltk.download('wordnet') #UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
+# nltk.download('punkt_tab') #UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
 def get_synonyms(query):
     synonyms = set()
     for syn in wordnet.synsets(query):

@@ -1,17 +1,157 @@
 {% extends 'home/dashboard.html' %}
-{% block title %}History{% endblock %}
+{% block title %}Assistant{% endblock %}
 {% block upload %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
 {% block auto_clustering %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
 {% block explore_topics %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
 {% block history %}text-gray-100 bg-gray-700 bg-opacity-25{% endblock %}
 {% block css %}
 <style>
-   
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        background-color: #0d1017;
+        padding: 20px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+    .chat-box {
+        width: 100%;
+        max-width: 800px;
+        background-color: #1a1d2f;
+        border: 2px solid #ff7f50;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        height: 400px;
+        color: white;
+        font-size: 16px;
+    }
+    .user-input-box {
+        display: flex;
+        width: 100%;
+        margin-top: 20px;
+    }
+    .input-field {
+        flex: 1;
+        padding: 10px;
+        border: 2px solid #ff7f50;
+        border-radius: 5px;
+        background-color: #2a2d40;
+        color: white;
+        font-size: 16px;
+        height: 50px;
+    }
+    .send-btn {
+        margin-left: 10px;
+        padding: 10px 20px;
+        background-color: #ff7f50;
+        border: none;
+        border-radius: 5px;
+        color: #0d1017;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .send-btn:hover {
+        background-color: #ff5733;
+    }
+    .typing-indicator {
+        font-style: italic;
+        color: #ff7f50;
+        margin-bottom: 10px;
+    }
+    .second-head {
+        color: #ff7f50;
+        font-size: 2.5rem;
+        font-weight: bold;
+        display: inline;
+    }
 </style>
 {% endblock %}
 {% block body %}
-{% comment %} edit below content to make a new page, keep rest contents same, to make the second ex- auto clustering link active, add the text-gray-100... classes of upload to auto clustering and add text-gray-500... classes to rest link blocks  {% endcomment %}
-<div>Assistant</div>
-{% comment %} edit till here to make a new page  {% endcomment %}
+<div class="chat-container" style="overflow-y: auto;">
+    <div class="second-head" id="second-head"></div><span id="blinking-cursor">|</span>
+    <div class="chat-box" id="chat-box">
+        <p class="typing-indicator" id="typing-indicator">Assistant is typing...</p>
+        <!-- Chat content will be dynamically inserted here -->
+    </div>
+    <div class="user-input-box">
+        <input type="text" class="input-field" id="user-input" placeholder="Type your message...">
+        <button class="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+</div>
 {% endblock %}
-{% block js %}{% endblock %}
+{% block js %}
+<script>
+    document.getElementById('typing-indicator').style.display = 'none';
+
+    function sendMessage() {
+        const userInput = document.getElementById('user-input').value;
+        if (!userInput) return;
+
+        // Show assistant typing indicator
+        document.getElementById('typing-indicator').style.display = 'block';
+
+        // AJAX POST request to send the user's query and get the response
+        fetch("{% url 'rag_assistant' username=request.user.username %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({ query: userInput }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('typing-indicator').style.display = 'none';
+
+            // Create a new paragraph for the assistant's response
+            const assistantMessage = document.createElement('p');
+            typeText(assistantMessage, 'Assistant: ' + data.response, 3000);
+            document.getElementById('chat-box').appendChild(assistantMessage);
+        });
+
+        // Clear input field after sending the message
+        document.getElementById('user-input').value = '';
+    }
+
+    // Function to simulate dynamic typing for the assistant's response
+    function typeText(element, text, duration) {
+        let index = 0;
+        const interval = duration / text.length;
+
+        function typeNextChar() {
+            if (index < text.length) {
+                element.textContent += text[index];
+                index++;
+                setTimeout(typeNextChar, interval);
+            }
+        }
+        typeNextChar();
+    }
+</script>
+
+<!-- Script for Blinking Cursor and Typing Animation in Header -->
+<script>
+    function blinkCursor() {
+        const cursor = document.getElementById("blinking-cursor");
+        cursor.style.visibility = (cursor.style.visibility === 'visible') ? 'hidden' : 'visible';
+    }
+    setInterval(blinkCursor, 1); // Blinking cursor every 500ms
+
+    // Function to type out the 'Your Research Assistant...' text
+    const headerText = "Your Research Assistant at your service.";
+    const typingSpeed = 50;
+    let i = 0;
+    function typeHeaderText() {
+        if (i < headerText.length) {
+            document.getElementById("second-head").textContent += headerText[i];
+            i++;
+            setTimeout(typeHeaderText, typingSpeed);
+        }
+    }
+    typeHeaderText();
+</script>
+{% endblock %}
