@@ -161,3 +161,4 @@ Q_CLUSTER = {
     'bulk': 10,
     'orm': 'default',  # Use Django ORM for task storage
 }
+X_FRAME_OPTIONS = 'SAMEORIGIN'

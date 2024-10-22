@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect,get_object_or_404
 from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
+from django.views import View
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 import os
@@ -9,7 +10,7 @@ import re
 import json
 from django.conf import settings
 from django.urls import reverse
-from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument
+from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument, Citation
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from django.contrib import messages
@@ -904,3 +905,25 @@ def rag_assistant(request, username):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+class GenerateCitationsView(View):
+    def get(self, request, paper_id):
+        paper = ResearchPaper.objects.get(id=paper_id)
+        
+        citations = Citations.objects.filter(paper=paper).first()
+        if citations:
+            return JsonResponse({'citations': citations.citations, 'existing': True})
+        generated_citations = self.generate_citations(paper)
+
+        citations = Citations.objects.create(
+            user=request.user,
+            paper=paper,
+            citations=generated_citations
+        )
+        
+        return JsonResponse({'citations': citations.citations, 'existing': False})
+
+    def generate_citations(self, paper):
+        # Your logic for generating citations
+        # This is a placeholder. Replace it with actual LLM integration.
+        return "<p>APA Citation: ...</p><p>MLA Citation: ...</p><p>Chicago Citation: ...</p><p>Harvard Citation: ...</p>"

@@ -12,6 +12,14 @@ class ResearchPaper(models.Model):
 
     def __str__(self):
         return self.title
+
+class Citation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    paper = models.ForeignKey(ResearchPaper, on_delete=models.CASCADE, null=True, blank=True)
+    citations = models.TextField()
+
+    def __str__(self):
+        return self.paper.title
     
 class VectorDocument(models.Model):
     paper=models.ForeignKey(ResearchPaper, on_delete=models.CASCADE)

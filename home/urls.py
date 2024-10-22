@@ -23,6 +23,7 @@ urlpatterns = [
     path('view_pdf/<int:id>/', views.render_pdf_viewer, name="render_pdf_viewer"),
     path('view_pdf/<int:id>/generate_summary/', views.generate_summary, name="generate_summary"),
     path('view_pdf/notes/<int:id>/', views.render_pdf_notes, name="render_pdf_notes"),
+    path('view_pdf/<int:paper_id>/generate_citations/', views.GenerateCitationsView.as_view(), name='generate_citations'),
     path('save_notes/<str:username>/<int:paper_id>/', views.save_notes, name='save_notes'),
     path('search/', views.search_engine, name="search"),
 ]
