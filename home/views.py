@@ -897,7 +897,6 @@ def rag_assistant(request, username):
                         formatted_response += f"- {title}\n"
                         added_titles.append(title)
 
-
             return JsonResponse({"message": formatted_response}, status=200)
 
         except Exception as e:
