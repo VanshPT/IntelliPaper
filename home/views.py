@@ -27,6 +27,7 @@ from rank_bm25 import BM25Okapi
 from .helper import get_synonyms,get_contextual_terms, get_phrases
 import nltk
 from django.core.paginator import Paginator
+from langchain.embeddings import HuggingFaceEmbeddings
 import chromadb
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 # from langchain_community.llms import Ollama
@@ -50,7 +51,7 @@ def landing(request):
 def render_dashboard(request, username):
     user = request.user
     latest_papers = ResearchPaper.objects.filter(user=user).order_by('-upload_datetime')[:8]
-    async_task('home.tasks.load_documents')
+    async_task('home.tasks.process_pdf_documents')
     context = {
         'username': user.username,
         'first_name': user.first_name,
@@ -805,9 +806,101 @@ def expand_query(query):
     return list(expanded_terms)
 
 
+embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+chroma_client = chromadb.PersistentClient(
+    path=os.path.join(settings.BASE_DIR, 'chromadb_storage'),
+    settings=Settings(),
+    tenant=DEFAULT_TENANT,
+    database=DEFAULT_DATABASE,
+)
+
 @login_required
 def rag_assistant(request, username):
-    if request.user:
-        user=request.user 
-        pass 
-    
+    if request.method == 'POST':
+        try:
+            # Get the JSON body from the request
+            data = json.loads(request.body)
+            query = data.get('query')
+
+            if not query:
+                return JsonResponse({"error": "No query provided"}, status=400)
+
+            print(f"Received query: {query}")
+
+            # Convert the query to vector using the same embeddings model
+            query_embedding = embedding_model.embed_query(query)
+            print(f"Query vector generated: {query_embedding[:5]}...")  # Print first 5 elements of the vector for debugging
+
+            # Access the research_papers collection in ChromaDB
+            collection = chroma_client.get_or_create_collection(name="research_papers")
+
+            # Query the top 3 results from ChromaDB
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=3
+            )
+
+            # print(f"Top 3 results retrieved from ChromaDB: {results}")
+
+            # Extract paper IDs and corresponding excerpts
+            paper_ids = [chunk_id.split('_')[0] for chunk_id in results['ids'][0]]
+            excerpts = [result for result in results['documents'][0]]
+
+            # Fetch titles of papers from the ResearchPaper model
+            papers = ResearchPaper.objects.filter(id__in=paper_ids)
+            paper_titles = {str(p.id): p.title for p in papers}
+
+            # Create excerpts for the prompt
+            paper_excerpts = " ".join(excerpts)
+
+            # Prepare the prompt for the Gemini API
+            prompt = f"""
+            Based on the following paper excerpts, provide a meaningful answer to the user's query. 
+            Please quote crucial sentences and show the titles of the papers from which the answers are extracted.
+            If no results obtained, give output from your own answer and show no excerpts found.
+            Text excerpts: 
+            {paper_excerpts}
+            """
+
+            # Configure Gemini API key
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+
+            # Define generation configuration
+            generation_config = {
+                "temperature": 0.0,  # More deterministic responses
+                "top_p": 0.95,
+                "top_k": 64,
+                "max_output_tokens": 200,  # Increase the token limit if needed
+                "response_mime_type": "text/plain",
+            }
+
+            # Initialize the Gemini model
+            model = genai.GenerativeModel(
+                model_name="gemini-1.5-flash",
+                generation_config=generation_config,
+            )
+
+            # Start a new chat session
+            chat_session = model.start_chat(history=[])
+
+            # Send the prompt to Gemini and get the response
+            response = chat_session.send_message(prompt)
+            answer = response.text.strip()
+
+            # Format the output to include the paper titles
+            formatted_response = f"{answer}\n\nSources:\n"
+            added_titles = []  # List to keep track of added paper titles
+            for paper_id in paper_ids:
+                if paper_id in paper_titles:
+                    title = paper_titles[paper_id]
+                    if title not in added_titles:  # Check if the title is already added
+                        formatted_response += f"- {title}\n"
+                        added_titles.append(title)
+
+            return JsonResponse({"message": formatted_response}, status=200)
+
+        except Exception as e:
+            print(f"Error in RAG Assistant: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)

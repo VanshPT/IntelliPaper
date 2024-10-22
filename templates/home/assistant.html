@@ -5,6 +5,9 @@
 {% block explore_topics %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
 {% block history %}text-gray-100 bg-gray-700 bg-opacity-25{% endblock %}
 {% block css %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/marked.min.js" integrity="sha512-49xmrP3uviO3RLWud0G4giZPhidSGQMjdsX3AkGH0tW4q1FN1nzTa4WGhyKIl+sggfI2q9rB78y/HvVK2HbVnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/lib/marked.esm.js" integrity="sha512-50lTDS1rnOHdbzplG8w87C0xhRuf4f4fvMuGN0FCaFJbji//UOOLDIPnJLEe0glsYYzgMyfzZzKLS/9zzCFMZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/lib/marked.umd.js" integrity="sha512-XRM/dDs+vPBC8GmYAYoIVGQ3j9m1bVQqXMS1bfwJ1cCNBMJt/FCZYHeXj5r9dzUX7FX2/XAEbvo3SAVuIITnaQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
     .chat-container {
         display: flex;
@@ -78,12 +81,14 @@
         <!-- Chat content will be dynamically inserted here -->
     </div>
     <div class="user-input-box">
-        <input type="text" class="input-field" id="user-input" placeholder="Type your message...">
+        <input type="text" class="input-field" id="user-input" name="query" placeholder="Type your message...">
         <button class="send-btn" onclick="sendMessage()">Send</button>
     </div>
 </div>
 {% endblock %}
 {% block js %}
+
+<!-- Include marked.js -->
 <script>
     document.getElementById('typing-indicator').style.display = 'none';
 
@@ -95,7 +100,7 @@
         document.getElementById('typing-indicator').style.display = 'block';
 
         // AJAX POST request to send the user's query and get the response
-        fetch("{% url 'rag_assistant' username=request.user.username %}", {
+        fetch(`/assistant/{{ request.user.username }}/send_query/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -107,14 +112,48 @@
         .then(data => {
             document.getElementById('typing-indicator').style.display = 'none';
 
+            // Check if the response contains data
+            if (data.error) {
+                console.log("Error:", data.error);
+                return;
+            }
+
             // Create a new paragraph for the assistant's response
             const assistantMessage = document.createElement('p');
-            typeText(assistantMessage, 'Assistant: ' + data.response, 3000);
+            const formattedMessage = formatResponseText(data.message); // Format the response text
+            assistantMessage.innerHTML = '<strong style="color: #ff7f50;">Assistant: </strong>' + formattedMessage; // Use innerHTML to include HTML tags
+            console.log(data.message)
             document.getElementById('chat-box').appendChild(assistantMessage);
+        })
+        .catch(error => {
+            console.error("Error in the AJAX request:", error);
+            document.getElementById('typing-indicator').style.display = 'none';
         });
 
         // Clear input field after sending the message
         document.getElementById('user-input').value = '';
+    }
+    function customMarkdown(text) {
+        // Convert bold text (**) to <strong>
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        // Convert italic text (*) to <em>
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Convert headers
+        text = text.replace(/###### (.+)/g, '<h6>$1</h6>');
+        text = text.replace(/##### (.+)/g, '<h5>$1</h5>');
+        text = text.replace(/#### (.+)/g, '<h4>$1</h4>');
+        text = text.replace(/### (.+)/g, '<h3>$1</h3>');
+        text = text.replace(/## (.+)/g, '<h2>$1</h2>');
+        text = text.replace(/# (.+)/g, '<h1>$1</h1>');
+        // Convert line breaks
+        text = text.replace(/\n/g, '<br/>');
+
+        return text;
+    }
+
+    // Function to format the response text using marked.js
+    function formatResponseText(text) {
+        return customMarkdown(text); // Use marked.js to convert Markdown to HTML
     }
 
     // Function to simulate dynamic typing for the assistant's response
@@ -124,7 +163,7 @@
 
         function typeNextChar() {
             if (index < text.length) {
-                element.textContent += text[index];
+                element.innerHTML += text[index]; // Use innerHTML to include HTML tags
                 index++;
                 setTimeout(typeNextChar, interval);
             }
@@ -139,7 +178,7 @@
         const cursor = document.getElementById("blinking-cursor");
         cursor.style.visibility = (cursor.style.visibility === 'visible') ? 'hidden' : 'visible';
     }
-    setInterval(blinkCursor, 1); // Blinking cursor every 500ms
+    setInterval(blinkCursor, 500); // Blinking cursor every 500ms
 
     // Function to type out the 'Your Research Assistant...' text
     const headerText = "Your Research Assistant at your service.";
