@@ -121,7 +121,7 @@
             // Create a new paragraph for the assistant's response
             const assistantMessage = document.createElement('p');
             const formattedMessage = formatResponseText(data.message); // Format the response text
-            assistantMessage.innerHTML = '<strong style="color: #ff7f50;">Assistant: </strong>' + formattedMessage; // Use innerHTML to include HTML tags
+            assistantMessage.innerHTML = '<br><strong style="color: #ff7f50;">Assistant: </strong>' + formattedMessage; // Use innerHTML to include HTML tags
             console.log(data.message)
             document.getElementById('chat-box').appendChild(assistantMessage);
         })

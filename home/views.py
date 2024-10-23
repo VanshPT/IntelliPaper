@@ -480,9 +480,10 @@ def delete_paper1(request, username, id):
 
 @login_required
 def auto_cluster(request, username):
-    if request.user.username !=username:
+    if request.user.username != username:
         messages.error(request, "You are not logged in with this username")
         return redirect('/')
+    
     papers = ResearchPaper.objects.filter(user=request.user)
     if papers.count() == 0:
         messages.info(request, "No PDFs exist in your account.")
@@ -490,52 +491,34 @@ def auto_cluster(request, username):
     if papers.count() == 1:
         messages.info(request, "Only one paper exists in your account.")
         return redirect(f'/auto_cluster/{username}')
+
+    # Prepare custom documents in the format {id}-{title}-{abstract}
+    paper_docs = prepare_custom_documents(papers)
     
-    embeddings, paper_ids = get_embeddings_for_papers(papers)
-    cluster_labels = perform_clustering(embeddings)
-    cluster_names = get_cluster_names(cluster_labels, len(set(cluster_labels)), paper_ids, papers)
-    save_clusters(cluster_names, cluster_labels, paper_ids, request.user)
+    # Send the paper docs to Gemini for intelligent clustering and naming
+    cluster_mapping = intelligent_clustering_via_gemini(paper_docs)
+    
+    # Save the clusters with the new names
+    save_clusters_gemini_based(cluster_mapping, request.user)
     
     return redirect(f'/auto_cluster/{request.user.username}')
 
 
-
-def get_embeddings_for_papers(papers):
-    model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')  # BERT-like embeddings
-    embeddings = []
-    paper_ids = []
-
+def prepare_custom_documents(papers):
+    """
+    Prepare documents for each paper in the format {id}-{title}-{abstract}.
+    """
+    paper_docs = []
     for paper in papers:
-        text = paper.extracted_text[:5000]
-        embedding = model.encode(text, convert_to_numpy=True)
-        embeddings.append(embedding)
-        paper_ids.append(paper.id)
-
-    return np.array(embeddings), paper_ids
+        custom_doc = f"{paper.id}-{paper.title}-{paper.abstract[:500]}"
+        paper_docs.append(custom_doc)
+    return paper_docs
 
 
-
-
-media_dir = 'media/agg_models'
-os.makedirs(media_dir, exist_ok=True)
-def perform_clustering(embeddings):
-    # Compute cosine similarity matrix for embeddings
-    similarity_matrix = cosine_similarity(embeddings)
-    
-    clustering_model = AgglomerativeClustering(
-        metric='precomputed',
-        linkage='average',
-        distance_threshold=0.5,
-        n_clusters=None
-    )
-    cluster_labels = clustering_model.fit_predict(1 - similarity_matrix)
-    model_path = os.path.join(media_dir, 'agglomerative_clustering_model.joblib')
-    joblib.dump(clustering_model, model_path)
-
-    return cluster_labels
-
-
-def get_cluster_names(cluster_labels, n_clusters, paper_ids, papers):
+def intelligent_clustering_via_gemini(paper_docs):
+    """
+    Send the custom documents to Gemini for clustering and get cluster names and labels.
+    """
     # Configure Gemini API key
     genai.configure(api_key=settings.GEMINI_API_KEY)
 
@@ -544,7 +527,7 @@ def get_cluster_names(cluster_labels, n_clusters, paper_ids, papers):
         "temperature": 0.0,  # More deterministic responses
         "top_p": 0.95,
         "top_k": 64,
-        "max_output_tokens": 100,  # Limit tokens to avoid resource issues
+        "max_output_tokens": 300,  # Limit tokens to avoid resource issues
         "response_mime_type": "text/plain",
     }
 
@@ -557,56 +540,72 @@ def get_cluster_names(cluster_labels, n_clusters, paper_ids, papers):
     # Start a new chat session (reuse this for all requests)
     chat_session = model.start_chat(history=[])
 
-    cluster_names = {}
+    # Create the prompt for Gemini API
     prompt_template = """
-    Based on the following paper excerpts, provide a meaningful folder name that categorizes them, if clusters have multiple topics like AI and Business finance etc, then folder name should be Ai, Business Finance. give clean folder names which are crisp and small based on understanding of cluster. Keep the title in normal font in response dont add **TITLE**, just output TITLE.Only give directly the answer nothing else before or after.
-    Text excerpts: 
-    {paper_excerpts}
+    You are given a list of research papers where each entry consists of an ID, a title, and an abstract (the first part is the ID, followed by the title and a portion of the abstract). Your task is to cluster these papers based on their topics.
+
+The output should strictly follow this format:
+cluster_name_1: [id1, id3]
+cluster_name_2: [id2, id5]
+
+Please make sure you only use the IDs (the numbers at the start of each entry) in the output clusters. Do not include titles or explanations, just return the cluster names and the list of corresponding IDs in the format shown above. Also note one paper can be clustered into multiple folders also. let me give you an example you should cluster like that. lets say we got three papers based on fire detecton system project usign ml or dl or lany other techniques, so one cluster should definitely be named fire detection system which should have all these ids of papers related to this topic, also they can be part of another paper, in short best experience should be provided to a real life user use case, if i am making a good project on some topic and researching multiple aproaches, one folder should compulsarily be found there containing all the papers uploaded regarding that project topic. so clusters with such project based like clustering should also be there and also clusters which little broad range of clustering both types of clusters. Best User experience should always be provided, if i am researching on some project topic you have to intelligently give a cluster based on this topic. Also numbers of clusters generated should be minimal only important ones.
+
+Here are the documents:
+{paper_docs}
     """
 
-    all_responses = []
+    # Create the prompt with paper documents
+    prompt = prompt_template.format(paper_docs="; ".join(paper_docs))
 
-    for cluster in range(n_clusters):
-        # Get papers in this cluster
-        papers_in_cluster = [papers.get(id=paper_ids[i]) for i in range(len(paper_ids)) if cluster_labels[i] == cluster]
+    try:
+        # Send the prompt to Gemini and get the response
+        response = chat_session.send_message(prompt)
+        print("raw: ",response.text)
+        cluster_mapping = parse_gemini_response(response.text)
 
-        # Extract text excerpts from each paper, but limit the total size to avoid long prompts
-        paper_texts = [paper.extracted_text[:300] for paper in papers_in_cluster]  # Limit excerpt size to 300 chars per paper
-        paper_excerpts = " ".join(paper_texts)
-        print(paper_excerpts)
-        if not paper_excerpts.strip():  # If no excerpts, skip to next cluster
-            cluster_names[cluster] = f"Cluster_{cluster}"
-            continue
+    except Exception as e:
+        logging.error(f"Error during clustering with Gemini: {e}")
+        raise
 
-        # Create the prompt
-        prompt = prompt_template.format(paper_excerpts=paper_excerpts)
-
-        try:
-            # Send the prompt to Gemini and get the response
-            response = chat_session.send_message(prompt)
-            cluster_names[cluster] = response.text.strip()
-            
-            # Sleep for 3 seconds after receiving the response
-            # time.sleep(10)
-
-        except Exception as e:
-            logging.error(f"Error during LLM processing with Gemini: {e}")
-            # Fallback to a default cluster name if there's an error
-            cluster_names[cluster] = f"Cluster_{cluster}"
-
-    return cluster_names
+    return cluster_mapping
 
 
+def parse_gemini_response(response_text):
+    """
+    Parse the response from Gemini to extract cluster mappings.
+    We expect the format: Cluster Name: [id1, id2, id3]
+    """
+    cluster_mapping = {}
 
-def save_clusters(cluster_names, cluster_labels, paper_ids, user):
+    try:
+        # Match each line that contains a cluster name and its associated paper IDs
+        clusters = re.findall(r"([A-Za-z0-9\s\-&,]+): \[(.*?)\]", response_text)
+
+        for cluster_name, paper_ids_str in clusters:
+            # Convert the paper IDs string into a list of integers
+            paper_ids = [int(paper_id.strip()) for paper_id in paper_ids_str.split(',')]
+            cluster_mapping[cluster_name.strip()] = paper_ids
+    except Exception as e:
+        logging.error(f"Error parsing Gemini response: {e}")
+
+    return cluster_mapping
+
+
+def save_clusters_gemini_based(cluster_mapping, user):
+    """
+    Save the clusters generated by Gemini with appropriate names.
+    """
     # Delete all existing folders for this user before creating new clusters
     Folder.objects.filter(created_by=user).delete()
 
-    for cluster, folder_name in cluster_names.items():
-        folder = Folder.objects.create(name=folder_name, created_by=user)
-
-        papers_in_cluster = [paper_ids[i] for i in range(len(paper_ids)) if cluster_labels[i] == cluster]
-        folder.papers.set(ResearchPaper.objects.filter(id__in=papers_in_cluster))
+    for cluster_name, paper_ids in cluster_mapping.items():
+        print(f"Saving cluster: {cluster_name} with papers: {paper_ids}")
+        # Create a new folder for each cluster
+        folder = Folder.objects.create(name=cluster_name, created_by=user)
+        
+        # Fetch ResearchPaper objects using the IDs and associate them with the folder
+        papers = ResearchPaper.objects.filter(id__in=paper_ids)
+        folder.papers.set(papers)
         folder.save()
 
 
