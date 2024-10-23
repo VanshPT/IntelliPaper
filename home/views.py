@@ -25,7 +25,7 @@ import joblib
 import time
 import requests
 from rank_bm25 import BM25Okapi
-from .helper import get_synonyms,get_contextual_terms, get_phrases
+from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations
 import nltk
 from django.core.paginator import Paginator
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -910,12 +910,12 @@ class GenerateCitationsView(View):
     def get(self, request, paper_id):
         paper = ResearchPaper.objects.get(id=paper_id)
         
-        citations = Citations.objects.filter(paper=paper).first()
+        citations = Citation.objects.filter(paper=paper).first()
         if citations:
             return JsonResponse({'citations': citations.citations, 'existing': True})
-        generated_citations = self.generate_citations(paper)
+        generated_citations = generate_citations(paper)
 
-        citations = Citations.objects.create(
+        citations = Citation.objects.create(
             user=request.user,
             paper=paper,
             citations=generated_citations
@@ -923,7 +923,4 @@ class GenerateCitationsView(View):
         
         return JsonResponse({'citations': citations.citations, 'existing': False})
 
-    def generate_citations(self, paper):
-        # Your logic for generating citations
-        # This is a placeholder. Replace it with actual LLM integration.
-        return "<p>APA Citation: ...</p><p>MLA Citation: ...</p><p>Chicago Citation: ...</p><p>Harvard Citation: ...</p>"
+    

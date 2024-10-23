@@ -216,6 +216,23 @@
     });
 </script>
 <script>
+    function customMarkdown(text) {
+        // Convert bold text (**) to <strong>
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        // Convert italic text (*) to <em>
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Convert headers
+        text = text.replace(/###### (.+)/g, '<h6>$1</h6>');
+        text = text.replace(/##### (.+)/g, '<h5>$1</h5>');
+        text = text.replace(/#### (.+)/g, '<h4>$1</h4>');
+        text = text.replace(/### (.+)/g, '<h3>$1</h3>');
+        text = text.replace(/## (.+)/g, '<h2>$1</h2>');
+        text = text.replace(/# (.+)/g, '<h1>$1</h1>');
+        // Convert line breaks
+        text = text.replace(/\n/g, '<br/>');
+
+        return text;
+    }
     document.getElementById("citationModal").addEventListener("show.bs.modal", function () {
     const paperId = window.location.pathname.split("/")[2];
 
@@ -235,9 +252,9 @@
     .then(data => {
         // Update citations box with the returned data
         if (data.existing) {
-            citationsBox.innerHTML = data.citations;  // Display existing citations
+            citationsBox.innerHTML = customMarkdown(data.citations);  // Display existing citations
         } else {
-            citationsBox.innerHTML = data.citations;  // Display newly generated citations
+            citationsBox.innerHTML = customMarkdown(data.citations);  // Display newly generated citations
         }
     })
     .catch(error => {
