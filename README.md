@@ -139,6 +139,8 @@ IntelliPaper aims to be the most effective AI/GenAI project for enhancing resear
 ![image](https://github.com/user-attachments/assets/e8bc6c00-ba69-4b2a-b91b-c248cecdced7)
 ![image](https://github.com/user-attachments/assets/67efb429-5517-4a40-8da6-0fa143e74572)
 ![image](https://github.com/user-attachments/assets/1e35511c-803b-413d-b02d-a5a84870f2ca)
+![image](https://github.com/user-attachments/assets/c366edbc-0327-454c-95a4-4262544b0b2e)
+
 
 
 
