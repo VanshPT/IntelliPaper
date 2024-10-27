@@ -18,7 +18,7 @@ IntelliPaper is a powerful web application designed for individuals who regularl
 
 - **⏳ Summary Generator:** Get a concise summary of any research paper in just seconds with our GenAI-powered summary generator, saving you valuable time.
 
-- **🤖 RAG-Based Chatbot:** Ask questions about your saved papers! (This feature is currently under construction.)
+- **🤖 RAG-Based Chatbot:** Ask questions about your saved papers To Intellipaper Assistant!
 
 - **🔍 Custom Search Engine:** A robust search engine built from scratch that retrieves research papers based on contextual relevance, using advanced NLP and IR systems. Our search algorithm ranks papers based on a hybrid approach using BM25 and Cosine Similarity to ensure the best results for your query. For more details, check out our Search Engine Documentation! 🚀 refer to our [Search Engine Documentation](SEARCH_ENGINE.md).
 
@@ -34,7 +34,7 @@ IntelliPaper is a powerful web application designed for individuals who regularl
 - **Core Technologies:** 
   - Natural Language Processing (NLP)
   - Information Retrieval (IR)
-  - Agglomerative Clustering (for AI clustering)
+  - ChromaDB for storing all chunks of all documents in vectorized form for RAG application.
   - BERT Embeddings (for context-aware vectors)
 
 ---
@@ -60,7 +60,16 @@ To run IntelliPaper locally, follow these steps:
    ```bash
    pip install -r requirements.txt
    ```
-
+3.1 **If any errors in installing chromadb library**
+    ```bash
+      - Go to https://visualstudio.microsoft.com/downloads/#:~:text=Build%20Tools%20for%20Visual%20Studio,UWP%2C%20WCF%2C%20and%20Xamarin.
+      - download community version of the IDE
+      - Install and open the installed app, click Modify and dont Launch
+      - click on below option and install
+      - Restart your computer and run requirements again using command 3. This time chromadb installation wont give error.
+    ```
+    ![image](https://github.com/user-attachments/assets/caf2ee1e-2eeb-4617-aae6-f0e5414a4dc7)
+    
 4. **Create a `.env` File:**
    In the root folder, create a `.env` file and add your API keys in the following format:
    ```plaintext
@@ -108,7 +117,7 @@ Now you're ready to enjoy IntelliPaper! 🎉
 - **Natural Language Processing (NLP):** Employed for metadata extraction and content analysis.
 - **Information Retrieval (IR):** Utilized in the custom search engine for effective paper querying.
 - **BERT based Embeddings:** Used to generate context-aware vectors for better clustering of papers.
-- **Agglomerative Clustering:** Machine learning algorithm for clustering research papers into coherent groups.
+- **ChromaDB** for storing all chunks of all documents in vectorized form for RAG application.
 
 ---
 
