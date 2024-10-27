@@ -19,9 +19,7 @@ import logging
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from django.contrib.auth.models import User
-from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics.pairwise import cosine_similarity
-import joblib
 import time
 import requests
 from rank_bm25 import BM25Okapi
@@ -825,12 +823,9 @@ def rag_assistant(request, username):
             if not query:
                 return JsonResponse({"error": "No query provided"}, status=400)
 
-            print(f"Received query: {query}")
 
             # Convert the query to vector using the same embeddings model
             query_embedding = embedding_model.embed_query(query)
-            print(f"Query vector generated: {query_embedding[:5]}...")  # Print first 5 elements of the vector for debugging
-
             # Access the research_papers collection in ChromaDB
             collection = chroma_client.get_or_create_collection(name="research_papers")
 
@@ -855,6 +850,8 @@ def rag_assistant(request, username):
 
             # Prepare the prompt for the Gemini API
             prompt = f"""
+            Answer taking full below prompt in mind as a whole.
+            This is Users Query: {query},  Also check once if text excerpts provided satisfy the user query or not, if yes then generate normally and ignore this line, if the query is any general question like "Hii, how are you" or anything which doesnt relate to excerpts even slightly then only take query into consideration and answer accordingly, dont even mention excerpts or query just answer directly from query and ignore the rest of prompt. If someone asks you who are you , your name is Intellipaper Research Assistant.
             Based on the following paper excerpts, provide a meaningful answer to the user's query. 
             Please quote crucial sentences and show the titles of the papers from which the answers are extracted.
             If no results obtained, give output from your own answer and show no excerpts found.
