@@ -51,6 +51,80 @@
     #close-message:hover svg {
         stroke: #ff7f50; /* Coral color on hover */
     }
+    #toggleSwitch:checked + div {
+      background-color: #4f46e6; /* Indigo color for active */
+    }
+    #toggleSwitch + div {
+      transition: background-color 0.3s ease;
+    }
+    /* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin-right:10px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #0d1017;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #f5945c;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+.multi-flex{
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+}
     </style>
     {% block css %} {% endblock %}
   </head>
@@ -59,6 +133,7 @@
         src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js"
         defer
       ></script>
+      
 
       <div x-data="{ sidebarOpen: false }" class="flex h-screen bg-gray-200">
         <div
@@ -208,8 +283,12 @@
                     ></path>
                   </svg>
                 </span>
-
-                <form action="/search/" method="GET" class="custt1-flex">
+                <div class="multi-flex">
+                  <label class="switch">
+                    <input type="checkbox" id="toggleSwitch" onchange="toggleFormAction()">
+                    <span class="slider round"></span>
+                  </label>
+                <form action="/search/" method="GET" class="custt1-flex" id="searchForm">
                   <input
                     class="custom-hw pl-10 pr-4 rounded-md form-input sm:w-80 focus:border-indigo-600"
                     type="text"
@@ -220,6 +299,7 @@
                     Search
                   </button>
                 </form>
+              </div>
 
               </div>
             </div>
@@ -412,6 +492,25 @@
         </div>
       </div>
     </div>
+    <script>
+      function toggleFormAction() {
+        const toggleSwitch = document.getElementById("toggleSwitch");
+        const searchForm = document.getElementById("searchForm");
+    
+        // Debug log to check if function is called and toggle state
+        console.log("Toggle changed:", toggleSwitch.checked);
+    
+        // Update form action based on toggle state
+        if (toggleSwitch.checked) {
+          searchForm.action = "/web-search/"; // Set action when toggle is on
+        } else {
+          searchForm.action = "/search/"; // Reset action when toggle is off
+        }
+        
+        // Debug log to confirm form action change
+        console.log("Form action set to:", searchForm.action);
+      }
+    </script>
     {% block js %}
     {% endblock %}
   </body>
