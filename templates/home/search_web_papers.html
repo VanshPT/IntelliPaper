@@ -1,0 +1,148 @@
+{% extends 'home/dashboard.html' %}
+{% block title %}Search Papers{% endblock %}
+{% block upload %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block auto_clustering %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block explore_topics %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block history %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
+{% block css %}
+<style>
+  .paper-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+  }
+  .paper-card h4 {
+    font-size: 1.25rem;
+    color: #2d3748;
+  }
+  .paper-card p {
+    font-size: 0.875rem;
+    color: #718096;
+  }
+  .view-details {
+    color: #ff7f50;
+    text-decoration: none;
+  }
+  .view-details:hover {
+    text-decoration: underline;
+  }
+  .margg-custom {
+    margin-top: 20px;
+    margin-left: 20px;
+  }
+  .custt-flex {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .custt-flex1 {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
+  }
+  .search-feature-link{
+    color:#ff7f50;
+  }
+  .search-feature-link:hover{
+    color:#f36a1b;
+    text-decoration: underline;
+  }
+  /* Pagination styles */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .pagination a,
+  .pagination span {
+    margin: 0 5px;
+    padding: 8px 16px;
+    text-decoration: none;
+    color: #2d3748;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  .pagination a:hover {
+    background-color: #ff7f50;
+    color: white;
+  }
+  .pagination .current {
+    background-color: #ff7f50;
+    color: white;
+    border-color: #ff7f50;
+  }
+  .pagination a.next-prev {
+    background-color: #ff7f50;
+    color: white;
+  }
+  .pagination a.next-prev:hover {
+    background-color: #e66f45;
+  }
+</style>
+{% endblock %}
+{% block body %}
+<div style="overflow-y: auto">
+  <div class="custt-flex1 margg-custom">
+    <a href="#" class="search-feature-link">See Results in form of categories</a>
+    <a href="#" class="search-feature-link">Advanced Search</a>
+    </div>
+  <div class="margg-custom custt-flex">
+    {% for paper in results %}
+    <div class="w-full sm:w-1/2 lg:w-1/3 px-4">
+      <div
+        class="paper-card p-6 rounded-lg shadow-lg bg-white border border-gray-200 hover:shadow-xl transition-shadow duration-300 ease-in-out"
+      >
+        <h4 class="text-lg font-bold text-gray-800 mb-2 truncate">
+          {{ paper.title|truncatechars:50 }}
+        </h4>
+        <p class="text-sm text-gray-600 mb-1">
+          <strong>Authors:</strong> {{ paper.authors|truncatechars:15 }}
+        </p>
+        <p class="text-sm text-gray-600 mb-4">
+          {{ paper.abstract|truncatechars:100 }}
+        </p>
+        <a
+          href="{{ paper.link }}"
+          class="inline-block px-4 py-2 text-sm font-semibold text-white rounded bg-[#ff7f50] hover:bg-orange-600 transition-colors duration-300 ease-in-out"
+        >
+          View Details
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Pagination Controls -->
+<div class="pagination">
+  {% if results.has_previous %}
+    <a href="?query={{ query }}&page=1">&laquo; First</a>
+    <a href="?query={{ query }}&page={{ results.previous_page_number }}">&lsaquo; Previous</a>
+  {% else %}
+    <span>&laquo; First</span>
+    <span>&lsaquo; Previous</span>
+  {% endif %}
+  
+  {% for page_num in results.paginator.page_range %}
+    {% if results.number == page_num %}
+      <span class="current">{{ page_num }}</span>
+    {% else %}
+      <a href="?query={{ query }}&page={{ page_num }}">{{ page_num }}</a>
+    {% endif %}
+  {% endfor %}
+
+  {% if results.has_next %}
+    <a href="?query={{ query }}&page={{ results.next_page_number }}">Next &rsaquo;</a>
+    <a href="?query={{ query }}&page={{ results.paginator.num_pages }}">Last &raquo;</a>
+  {% else %}
+    <span>Next &rsaquo;</span>
+    <span>Last &raquo;</span>
+  {% endif %}
+</div>
+
+{% endblock %}
+{% block js %}{% endblock %}

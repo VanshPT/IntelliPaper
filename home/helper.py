@@ -166,53 +166,38 @@ def generate_citations(paper):
     return citations
     
 
-
 # Function to fetch and parse research papers
 def fetch_research_papers(query, max_pages=3):
     base_url = f"https://arxiv.org/search/?query={query}&searchtype=all&abstracts=show&size=50&order=-announced_date_first"
     papers = []
-
-    # Set headers to mimic a browser request
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
 
-    # Loop through the pages
     for page in range(max_pages):
-        print(f"Scraping page {page + 1}")
         url = f"{base_url}&start={page * 50}"
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print(f"Failed to retrieve data. Status code: {response.status_code}")
             continue
 
-        # Parse HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
         entries = soup.find_all("li", class_="arxiv-result")
 
-        # Extract details from each entry
         for entry in entries:
             try:
                 title = entry.find("p", class_="title").text.strip()
-                authors = entry.find("p", class_="authors").text.strip()
-                abstract = entry.find("p", class_="abstract-full").text.strip()  # Changed to abstract-full
+                authors = entry.find("p", class_="authors").text.replace("Authors:", "").replace("\n", " ").strip()
+                abstract = entry.find("p", class_="abstract").text.strip()
                 link = entry.find("p", class_="list-title").find("a")["href"]
 
                 papers.append({
                     "title": title,
                     "authors": authors,
                     "abstract": abstract,
-                    "link": f"https://arxiv.org{link}"
+                    "link": link  # Link is already complete
                 })
             except AttributeError:
                 continue
 
-        # Add delay to avoid overwhelming the server
-        time.sleep(2)
-
-    # Return the results as a nested JSON-like structure
     return {"papers": papers}
-
-# Example usage (you can call this function from your Django views)
-# papers_data = fetch_research_papers(query="machine learning", max_pages=3)
-# print(papers_data)

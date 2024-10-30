@@ -919,11 +919,21 @@ class GenerateCitationsView(View):
         
         return JsonResponse({'citations': citations.citations, 'existing': False})
 
-    
+
+ 
 @login_required
 def web_search(request):
-    if request.user:
-        query = request.GET.get('query')
-        results=fetch_research_papers(query)
-        print(results)
-    return render(request, 'home/search_papers.html')
+    query = request.GET.get('query')
+    results = fetch_research_papers(query)
+    paper_list = results['papers']
+
+    # Set up pagination with 10 items per page
+    paginator = Paginator(paper_list, 12)
+    page_number = request.GET.get('page', 1)
+    ranked_papers = paginator.get_page(page_number)
+
+    context = {
+        'results': ranked_papers,
+        'query': query,
+    }
+    return render(request, 'home/search_web_papers.html', context)
