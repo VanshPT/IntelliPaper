@@ -26,4 +26,5 @@ urlpatterns = [
     path('view_pdf/<int:paper_id>/generate_citations/', views.GenerateCitationsView.as_view(), name='generate_citations'),
     path('save_notes/<str:username>/<int:paper_id>/', views.save_notes, name='save_notes'),
     path('search/', views.search_engine, name="search"),
+    path('web-search/', views.web_search,name="Web Search" )
 ]

@@ -23,7 +23,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import time
 import requests
 from rank_bm25 import BM25Okapi
-from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations
+from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations, fetch_research_papers
 import nltk
 from django.core.paginator import Paginator
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -920,3 +920,10 @@ class GenerateCitationsView(View):
         return JsonResponse({'citations': citations.citations, 'existing': False})
 
     
+@login_required
+def web_search(request):
+    if request.user:
+        query = request.GET.get('query')
+        results=fetch_research_papers(query)
+        print(results)
+    return render(request, 'home/search_papers.html')

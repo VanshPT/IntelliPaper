@@ -27,3 +27,5 @@ spacy==3.7.4
 transformers
 wheel
 chromadb
+python-decouple
+beautifulsoup4
