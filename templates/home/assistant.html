@@ -71,6 +71,38 @@
         font-weight: bold;
         display: inline;
     }
+    .user-input-box {
+    display: flex;
+    align-items: flex-end; /* Align button to the bottom */
+    width: 100%;
+}
+
+.input-field {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #ff7f50;
+    border-radius: 5px;
+    background-color: #2a2d40;
+    color: white;
+    font-size: 16px;
+    resize: none; /* Prevents manual resizing */
+    overflow-y: hidden; /* Hide scrollbar initially */
+}
+
+.send-btn {
+    margin-left: 10px;
+    padding: 10px 20px;
+    background-color: #ff7f50;
+    border: none;
+    border-radius: 5px;
+    color: #0d1017;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    height: auto; /* Keep button height fixed */
+    align-self: flex-end; /* Keeps button aligned with the bottom of the text box */
+}
+
 </style>
 {% endblock %}
 {% block body %}
@@ -81,15 +113,22 @@
         <!-- Chat content will be dynamically inserted here -->
     </div>
     <div class="user-input-box">
-        <input type="text" class="input-field" id="user-input" name="query" placeholder="Type your message...">
+        <textarea class="input-field" id="user-input" name="query" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
         <button class="send-btn" onclick="sendMessage()">Send</button>
     </div>
+
+
 </div>
 {% endblock %}
 {% block js %}
 
 
 <script>
+    function adjustHeight(element) {
+    element.style.height = 'auto'; // Reset height to auto
+    element.style.height = element.scrollHeight + 'px'; // Set height based on scrollHeight
+}
+
     document.getElementById('typing-indicator').style.display = 'none';
 
     function sendMessage() {
