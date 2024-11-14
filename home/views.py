@@ -96,7 +96,7 @@ def generate_summary(request, id):
             "temperature": 0.7,
             "top_p": 0.9,
             "top_k": 50,
-            "max_output_tokens": 1500,
+            "max_output_tokens": 6000,
             "response_mime_type": "text/plain",
         }
 
@@ -148,7 +148,7 @@ def generate_summary(request, id):
 
         # After all chunks are processed, request a final summary
         summary_prompt = """
-        Now that you've seen the entire research article in chunks, please generate a concise summary of the paper.
+        Please generate a well-structured summary of the research article, using a mix of concise paragraphs and bullet points where appropriate. Organize the content in a visually appealing, engaging style that provides clarity for both technical and non-technical readers. If any specialized or technical terms are used that may be unfamiliar to a general audience, briefly explain each term immediately after it appears in the summary.
         """
 
         # Send the final summary request with retry logic
@@ -156,10 +156,9 @@ def generate_summary(request, id):
 
         # Extract the main summary text from the response using regex (optional clean-up)
         raw_summary = final_summary_response.text
-        cleaned_summary = re.sub(r'\s+', ' ', raw_summary).strip()
 
         # Send the cleaned summary as the response to the AJAX request
-        return JsonResponse({"summary": cleaned_summary}, status=200)
+        return JsonResponse({"summary": raw_summary}, status=200)
 
     except ResearchPaper.DoesNotExist:
         return JsonResponse({"error": "Paper not found"}, status=404)
@@ -805,6 +804,7 @@ def expand_query(query):
 
 
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+
 chroma_client = chromadb.PersistentClient(
     path=os.path.join(settings.BASE_DIR, 'chromadb_storage'),
     settings=Settings(),
@@ -864,10 +864,10 @@ def rag_assistant(request, username):
 
             # Define generation configuration
             generation_config = {
-                "temperature": 0.0,  # More deterministic responses
+                "temperature": 0.3,  
                 "top_p": 0.95,
                 "top_k": 64,
-                "max_output_tokens": 200,  # Increase the token limit if needed
+                "max_output_tokens": 7000,  # Increase the token limit if needed
                 "response_mime_type": "text/plain",
             }
 

@@ -125,6 +125,31 @@ input:checked + .slider:before {
   justify-content:space-around;
   align-items:center;
 }
+.code-block {
+    background-color: #2d2d2d; /* Dark shade */
+    color: #f8f8f2; /* Light text color */
+    padding: 1em;
+    border-radius: 4px;
+    position: relative;
+    margin: 1em 0;
+}
+
+.code-block button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: #ff7f50; /* Your preferred color */
+    border: none;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.code-block button:hover {
+    background-color: #ff5b2a; /* Slightly darker shade for hover */
+}
+
     </style>
     {% block css %} {% endblock %}
   </head>
@@ -492,6 +517,7 @@ input:checked + .slider:before {
         </div>
       </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
     <script>
       function toggleFormAction() {
         const toggleSwitch = document.getElementById("toggleSwitch");

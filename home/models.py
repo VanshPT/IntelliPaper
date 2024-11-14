@@ -56,3 +56,19 @@ class Notes(models.Model):
 
     def __str__(self):
         return f'Notes for {self.paper.title} by {self.user.username}'
+    
+    
+class ChatConversation(models.Model):
+    cid=models.BigAutoField(primary_key=True)
+    title=models.CharField(max_length=250)
+    
+    def  __str__(self):
+        return self.title 
+    
+class ChatQueryResponse(models.Model):
+    rid=models.BigAutoField(primary_key=True)
+    cid=models.ForeignKey(ChatConversation, on_delete=models.CASCADE)
+    text=models.TextField(blank=True, null=True)
+    timestamp=models.DateTimeField(auto_now_add=True)    
+    
+    

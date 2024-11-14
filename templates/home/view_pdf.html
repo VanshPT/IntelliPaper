@@ -155,7 +155,9 @@
 {% comment %} edit till here to make a new page  {% endcomment %}
 {% endblock %}
 {% block js %}
+
 <script>
+    
     document.getElementById("custom-cluster-button").addEventListener("click", function() {
         // Get the paper ID from the current URL (assuming it's part of the URL path)
         const paperId = window.location.pathname.split("/")[2];
@@ -163,7 +165,7 @@
         // Disable the button to prevent multiple clicks
         const button = this;
         button.disabled = true;
-        button.textContent = "Generating summary...";
+        button.innerHTML = "Generating summary...";
 
         // Make the AJAX request
         fetch(`/view_pdf/${paperId}/generate_summary/`, {
@@ -183,7 +185,8 @@
             // Inject only the 'summary' field into the summary-box div
             const summary = data.summary || "No summary available.";
             const summaryBox = document.getElementById("summary-box");
-            summaryBox.textContent = summary;
+            const converter = new showdown.Converter();
+            summaryBox.innerHTML = converter.makeHtml(summary);
 
             
 
@@ -216,23 +219,7 @@
     });
 </script>
 <script>
-    function customMarkdown(text) {
-        // Convert bold text (**) to <strong>
-        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        // Convert italic text (*) to <em>
-        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        // Convert headers
-        text = text.replace(/###### (.+)/g, '<h6>$1</h6>');
-        text = text.replace(/##### (.+)/g, '<h5>$1</h5>');
-        text = text.replace(/#### (.+)/g, '<h4>$1</h4>');
-        text = text.replace(/### (.+)/g, '<h3>$1</h3>');
-        text = text.replace(/## (.+)/g, '<h2>$1</h2>');
-        text = text.replace(/# (.+)/g, '<h1>$1</h1>');
-        // Convert line breaks
-        text = text.replace(/\n/g, '<br/>');
-
-        return text;
-    }
+    
     document.getElementById("citationModal").addEventListener("show.bs.modal", function () {
     const paperId = window.location.pathname.split("/")[2];
 
