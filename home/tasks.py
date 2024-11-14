@@ -8,6 +8,8 @@ from langchain.document_loaders.pdf import PyPDFLoader
 from langchain.embeddings import HuggingFaceEmbeddings
 from django.conf import settings
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
+from .views import prepare_custom_documents, intelligent_clustering_via_gemini, save_clusters_gemini_based
+from django.contrib.auth.models import User
 
 # Initialize ChromaDB client
 chroma_client = chromadb.PersistentClient(
@@ -33,13 +35,12 @@ def process_pdf_documents():
         # Access or create the collection in ChromaDB
         collection = chroma_client.get_or_create_collection(name="research_papers")
         print(f"ChromaDB collection accessed or created successfully.")
-        
         for paper in research_papers:
             # Load the PDF for the paper
             pdf_path = paper.pdf_file.path
             if not os.path.exists(pdf_path):
                 logger.error(f"PDF not found for paper ID {paper.id}: {pdf_path}")
-                print(f"PDF not found for paper ID {paper.id}")
+                # print(f"PDF not found for paper ID {paper.id}")
                 continue  # Skip if PDF file does not exist
 
             print(f"Processing paper ID {paper.id}, PDF path: {pdf_path}")
@@ -48,7 +49,7 @@ def process_pdf_documents():
 
             # Extract the full text from the PDF
             full_text = "\n".join([page.page_content for page in document])
-            print(f"Extracted text for paper ID {paper.id}: {full_text[:200]}...")  # Log the first 200 characters
+            print(f"Extracted text for paper ID {paper.id}: {full_text[:200]}...")
 
             # Split the text into chunks
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -82,3 +83,27 @@ def process_pdf_documents():
     except Exception as e:
         logger.error(f"Error processing papers: {str(e)}")
         print(f"Error processing papers: {str(e)}")
+
+def auto_cluster_task(user_id):
+    try:
+        # Fetch user instance
+        user = User.objects.get(id=user_id)
+        
+        # Fetch papers associated with the user
+        papers = ResearchPaper.objects.filter(user=user)
+        if papers.count() < 2:
+            # Exit if no clustering can be done due to insufficient papers
+            return "Insufficient papers for clustering"
+
+        # Prepare custom documents for clustering
+        paper_docs = prepare_custom_documents(papers)
+        
+        # Perform clustering using Gemini
+        cluster_mapping = intelligent_clustering_via_gemini(paper_docs)
+        
+        # Save the cluster results
+        save_clusters_gemini_based(cluster_mapping, user)
+        
+        return "Clustering completed successfully"
+    except User.DoesNotExist:
+        return "User not found"

@@ -9,7 +9,6 @@ import io
 import re
 import json
 from django.conf import settings
-from django.urls import reverse
 from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument, Citation
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -394,23 +393,7 @@ def aggregate_metadata_from_chunks(chunks):
     print(metadata)
     return metadata
 
-def trigger_auto_clustering(username):
-    # Build the URL for the auto_cluster API
-    auto_cluster_url = reverse('auto_cluster', args=[username])
-    full_url = f'{settings.BASE_URL}{auto_cluster_url}'
-    
-    # Call the auto_cluster API using a GET request
-    try:
-        response = requests.get(full_url)
-        
-        # Check if the request was successful
-        if response.status_code == 200:
-            print(f"Auto-clustering for user {username} triggered successfully.")
-        else:
-            print(f"Failed to trigger auto-clustering. Status code: {response.status_code}")
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Error during auto-clustering API request: {e}")
+
 
 # Function to save the metadata and trigger auto-clustering after a delay
 def save_metadata_to_db(user, pdf_name, metadata, extracted_text):
@@ -867,7 +850,7 @@ def rag_assistant(request, username):
                 "temperature": 0.3,  
                 "top_p": 0.95,
                 "top_k": 64,
-                "max_output_tokens": 7000,  # Increase the token limit if needed
+                "max_output_tokens": 15000,  # Increase the token limit if needed
                 "response_mime_type": "text/plain",
             }
 

@@ -113,7 +113,9 @@ body {
     margin-bottom: 15px;
     margin-left: 15px;
 }
-
+.custom-margg3{
+    margin-top:2rem;
+}
 #proto-note {
     color: #ff7f50;
     margin-left: 20px;
@@ -139,6 +141,7 @@ body {
 /* Table styling */
 .table {
     min-width: 100%;
+    min-height: 100%;
 }
 
 thead th {

@@ -15,9 +15,9 @@
 <div class="readlists-section">
     <!-- Title and Create Readlist Button -->
     <div class="readlists-header">
-        <h3 class="text-3xl font-medium text-gray-700">Readlists</h3>
+        <h3 class="text-3xl font-medium text-gray-700 custom-margg3">Readlists</h3>
     </div>
-    <span id="proto-note">Note - This is a prototype, using free resources, hence sleep phases introduced between Gemini API to get proper output</span>
+    {% comment %} <span id="proto-note">Note - This is a prototype, using free resources, hence sleep phases introduced between Gemini API to get proper output</span> {% endcomment %}
     <div class="folder-grid">
 
  
@@ -52,10 +52,9 @@
 <div class="readlists-header">
     <h3 class="text-3xl font-medium text-gray-700">All Uploaded Papers</h3>
 </div>
-<div class="flex flex-col mt-8">
-    <div class="py-2 -my-2 overflow-x-auto sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-        <!-- Add max-height to limit visible height, and make it scrollable -->
-        <div class="inline-block min-w-full overflow-hidden align-middle border-b border-gray-200 shadow sm:rounded-lg table-wrapper" style="max-height: 400px; overflow-y: auto;">
+<div style="overflow-y: auto;" class="flex flex-col mt-8">
+    <div style="overflow-y: auto;" class="py-2 -my-2 overflow-x-auto sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div class="inline-block min-w-full overflow-hidden align-middle border-b border-gray-200 shadow sm:rounded-lg table-wrapper" >
             <table class="min-w-full">
                 <thead>
                     <tr>
@@ -68,7 +67,7 @@
                 </thead>
                 <tbody class="bg-white">
                     {% for paper in research_papers %}
-                    <tr id="id-of-paper-saved-under-this-user">
+                        <tr id="id-of-paper-saved-under-this-user">
                         <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-200">
                             <span class="text-sm font-medium leading-5 text-gray-900">{{ paper.title|truncatechars:20 }}</span>
                         </td>
@@ -89,7 +88,7 @@
                             </button>
                             {% include "home/partials/delete_modal1.html" %}
                         </td>
-                    </tr>
+                        </tr>
                     {% endfor %}
                 </tbody>
             </table>

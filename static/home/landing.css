@@ -173,12 +173,7 @@ max-width: 700px; /* Maximum width for the image */
 }
 }
 /* Image */
-img {
-margin-left:1rem;
-display: block;
-max-width: 100%;
-height: auto;
-}
+
 #product{
 background-color: rgb(17 24 39); /* Dark greyish blue color */
 color: white; /* Text color for better readability */
@@ -321,6 +316,11 @@ outline: 2px solid #4f46e5; /* Indigo 600 outline on focus */
 border-radius:8px;
 margin-right:5rem;
 width: 1000px;
+}
+.product_image_1{
+border-radius:8px;
+margin-right:3rem;
+width: 600px;
 }
 
 .text-orange{
