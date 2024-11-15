@@ -820,7 +820,7 @@ def rag_assistant(request, username):
                 "temperature": 0.3,
                 "top_p": 0.95,
                 "top_k": 64,
-                "max_output_tokens": 80000,  # Increase the token limit if needed
+                "max_output_tokens": 80000,  # Adjust the token limit if needed
                 "response_mime_type": "text/plain",
             }
 
@@ -835,7 +835,7 @@ def rag_assistant(request, username):
                 prompt = f"{refined_query}"
                 chat_session = model.start_chat(history=[])
                 response = chat_session.send_message(prompt)
-                end_time = time.time()  # End the clock
+                end_time = time.time()
                 print(f"Time taken: {end_time - start_time:.2f} seconds")
                 answer = response.text.strip()
                 return JsonResponse({"message": answer}, status=200)
@@ -851,47 +851,68 @@ def rag_assistant(request, username):
                 # Query the top results from ChromaDB
                 results = collection.query(
                     query_embeddings=[query_embedding],
-                    n_results=2
+                    n_results=10  # Retrieve top 10 results for the fallback mechanism
                 )
 
                 # Extract paper IDs and corresponding excerpts
                 paper_ids = [chunk_id.split('_')[0] for chunk_id in results['ids'][0]]
                 excerpts = [result for result in results['documents'][0]]
 
-                # Fetch titles of papers from the ResearchPaper model
-                papers = ResearchPaper.objects.filter(id__in=paper_ids)
-                paper_titles = {str(p.id): p.title for p in papers}
-
-                # Create excerpts for the prompt
-                paper_excerpts = " ".join(excerpts)
-
-                # Prepare the prompt for the Gemini API
+                # Step 1: Primary Retrieval with Initial 2 Excerpts
+                initial_excerpts = " ".join(excerpts[:2])
                 prompt = f"""
-                Answer taking full below prompt in mind as a whole.
-                This is Users Query: {refined_query},  Also check once if text excerpts provided satisfy the user query or not, if yes then generate normally and ignore this line, if the query is any general question like "Hii, how are you" or anything which doesn't relate to excerpts even slightly then only take query into consideration and answer accordingly, don't even mention excerpts or query just answer directly from query and ignore the rest of prompt. If someone asks you who are you, your name is Intellipaper Research Assistant.
-                Based on the following paper excerpts, provide a meaningful answer to the user's query.
-                Please quote crucial sentences and show the titles of the papers from which the answers are extracted.
-                If no results obtained, give output from your own answer and show no excerpts found.
-                Text excerpts: 
-                {paper_excerpts}
+                User Query: {refined_query}. Based on the following excerpts, provide an answer to the user's query. 
+                Excerpts: 
+                {initial_excerpts}
                 """
-
-                # Start a new chat session
                 chat_session = model.start_chat(history=[])
                 response = chat_session.send_message(prompt)
-                end_time = time.time()  # End the clock
-                print(f"Time taken: {end_time - start_time:.2f} seconds")
                 answer = response.text.strip()
+
+                # Step 2: Secondary Retrieval (5 Iterations with 2 Excerpts Each)
+                if "NO" in answer:
+                    print("NO")
+                    combined_excerpts = ""
+                    for i in range(0, 5):  # Iterate 5 times in total
+                        start_idx = i * 2
+                        end_idx = start_idx + 2
+                        iteration_excerpts = " ".join(excerpts[start_idx:end_idx])
+                        combined_excerpts += f"\n{iteration_excerpts}"
+
+                        # Iteration-specific prompt
+                        if i < 4:
+                            prompt = f"""
+                            This is iteration {i + 1}/5 of the query expansion. Here are two more excerpts. Do not respond until all 10 excerpts are provided. Only answer after you’ve received all excerpts.
+                            Additional Excerpts:
+                            {combined_excerpts}
+                            """
+                            response = chat_session.send_message(prompt)
+                            answer = response.text.strip()
+
+                          
+
+                        # Final Iteration (5th) Prompt
+                        if i == 4:
+                            prompt = f"""
+                            Here are the final two excerpts (totaling 10). Now, determine if you can provide a satisfactory and accurate answer to the query based on the information in these 10 excerpts.
+                            If you can answer confidently (or if 75% of the answer can be generated from these excerpts), proceed. Otherwise, respond with 'NO10' only, without any additional context. Unless you dont have to absolutely give the 'NO10' to improve user experience where from query you absolutely know you need whole paper to answer this query, try to give relevent, detauled answer to the query.
+                            All Excerpts:
+                            {combined_excerpts}
+                            """
+                            response = chat_session.send_message(prompt)
+                            answer = response.text.strip()
+
+                # Step 3: Third Fallback (Fetch Full PDF) if "NO10" is received
+                if "NO10" in answer:
+                    print("NO10")
+                    top_paper_id = paper_ids[0]
+                    top_paper = ResearchPaper.objects.get(id=top_paper_id)
+                    print(f"No satisfactory answer found. Full PDF path: {top_paper.pdf_file}")
+
+                    answer = "Unable to find a complete answer in the excerpts. Refer to the full paper for more details."
 
                 # Format the output to include the paper titles
                 formatted_response = f"{answer}\n\nSources:\n"
-                added_titles = []  # List to keep track of added paper titles
-                for paper_id in paper_ids:
-                    if paper_id in paper_titles:
-                        title = paper_titles[paper_id]
-                        if title not in added_titles:  # Check if the title is already added
-                            formatted_response += f"- {title}\n"
-                            added_titles.append(title)
 
                 return JsonResponse({"message": formatted_response}, status=200)
 
