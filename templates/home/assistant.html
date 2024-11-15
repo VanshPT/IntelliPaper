@@ -106,6 +106,20 @@
         color: #ff7f50;
         font-weight:bold;
     }
+    .user-message {
+        background-color: #ff7f50; /* Orange background for the query */
+        color: white; /* White text for visibility */
+        font-weight: bold; /* Bold text for the query */
+        padding: 10px; /* Add padding inside the box */
+        border-radius: 10px; /* Rounded corners */
+        margin-top: 10px; /* Space between queries and responses */
+        display: inline-block; /* Prevent box from spanning full width */
+    }
+
+    .assistant-message {
+        color: white; /* Default white text for assistant responses */
+        margin-top: 10px; /* Space between responses */
+    }
 </style>
 {% endblock %}
 {% block body %}
@@ -136,22 +150,31 @@
 </div>
 {% endblock %}
 {% block js %}
-
-
 <script>
     function adjustHeight(element) {
-    element.style.height = 'auto'; // Reset height to auto
-    element.style.height = element.scrollHeight + 'px'; // Set height based on scrollHeight
-}
+        element.style.height = 'auto'; // Reset height to auto
+        element.style.height = element.scrollHeight + 'px'; // Adjust height based on content
+    }
 
+    // Ensure typing indicator is initially hidden
     document.getElementById('typing-indicator').style.display = 'none';
 
     function sendMessage() {
-        const userInput = document.getElementById('user-input').value;
+        const userInput = document.getElementById('user-input').value.trim();
         if (!userInput) return;
 
-        // Show assistant typing indicator
+        const chatBox = document.getElementById('chat-box');
+
+        // Add the user query to the chat box in a styled orange box
+        const userMessage = document.createElement('div');
+        userMessage.classList.add('user-message'); // Apply the 'user-message' CSS class
+        userMessage.textContent = `You: ${userInput}`;
+        chatBox.appendChild(userMessage);
+
+        // Show typing indicator at the bottom
         document.getElementById('typing-indicator').style.display = 'block';
+        chatBox.appendChild(document.getElementById('typing-indicator'));
+        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
 
         // AJAX POST request to send the user's query and get the response
         fetch(`/assistant/{{ request.user.username }}/send_query/`, {
@@ -164,35 +187,42 @@
         })
         .then(response => response.json())
         .then(data => {
-            document.getElementById('typing-indicator').style.display = 'none';
+            document.getElementById('typing-indicator').style.display = 'none'; // Hide typing indicator
 
             // Check if the response contains data
             if (data.error) {
                 console.log("Error:", data.error);
+                const errorMessage = document.createElement('p');
+                errorMessage.innerHTML = `<strong style="color: red;">Error:</strong> ${data.error}`;
+                chatBox.appendChild(errorMessage);
                 return;
             }
 
-            // Create a new paragraph for the assistant's response
-            const assistantMessage = document.createElement('p');
+            // Add the assistant's response to the chat box
+            const assistantMessage = document.createElement('div');
+            assistantMessage.classList.add('assistant-message'); // Apply the 'assistant-message' CSS class
             const formattedMessage = formatResponseText(data.message); // Format the response text
-            assistantMessage.innerHTML = '<br><strong style="color: #ff7f50;">Assistant: </strong>' + formattedMessage; // Use innerHTML to include HTML tags
-            console.log(data.message)
-            document.getElementById('chat-box').appendChild(assistantMessage);
+            assistantMessage.innerHTML = `<strong style="color: #ff7f50;">Assistant: </strong>${formattedMessage}`;
+            chatBox.appendChild(assistantMessage);
+
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
         })
         .catch(error => {
             console.error("Error in the AJAX request:", error);
             document.getElementById('typing-indicator').style.display = 'none';
+            const errorMessage = document.createElement('p');
+            errorMessage.innerHTML = `<strong style="color: red;">Error:</strong> Unable to process your request.`;
+            chatBox.appendChild(errorMessage);
         });
 
         // Clear input field after sending the message
         document.getElementById('user-input').value = '';
     }
 
-    
     // Function to format the response text using marked.js
     function formatResponseText(text) {
         const converter = new showdown.Converter();
-        text_html=converter.makeHtml(text)
+        const text_html = converter.makeHtml(text);
         return text_html; 
     }
 
@@ -203,7 +233,7 @@
 
         function typeNextChar() {
             if (index < text.length) {
-                element.innerHTML += text[index]; // Use innerHTML to include HTML tags
+                element.innerHTML += text[index]; // Append the next character
                 index++;
                 setTimeout(typeNextChar, interval);
             }
