@@ -817,7 +817,7 @@ def rag_assistant(request, username):
 
             # Define generation configuration
             generation_config = {
-                "temperature": 0.3,
+                "temperature": 1,
                 "top_p": 0.95,
                 "top_k": 64,
                 "max_output_tokens": 80000,  # Adjust the token limit if needed
@@ -861,9 +861,17 @@ def rag_assistant(request, username):
                 # Step 1: Primary Retrieval with Initial 2 Excerpts
                 initial_excerpts = " ".join(excerpts[:2])
                 prompt = f"""
-                User Query: {refined_query}. Based on the following excerpts, provide an answer to the user's query. 
-                Excerpts: 
+                User Query: {query}
+
+                Below are two excerpts retrieved from the database. Determine whether these excerpts contain sufficient information to answer the query fully. 
+                - If the answer can be generated using these excerpts, provide the answer.
+                - If the excerpts are entirely irrelevant or lack key details needed to answer the query, respond with "NO" without providing further context.
+
+                Excerpts:
                 {initial_excerpts}
+
+                Important: If the excerpts provide even partial information related to the query, generate a meaningful response based on them.
+
                 """
                 chat_session = model.start_chat(history=[])
                 response = chat_session.send_message(prompt)
@@ -882,9 +890,19 @@ def rag_assistant(request, username):
                         # Iteration-specific prompt
                         if i < 4:
                             prompt = f"""
-                            This is iteration {i + 1}/5 of the query expansion. Here are two more excerpts. Do not respond until all 10 excerpts are provided. Only answer after you’ve received all excerpts.
-                            Additional Excerpts:
+                            This is iteration {i + 1}/5 of additional context for the user's query.Query is {query} Below are two more excerpts retrieved to expand on the previous context.
+                            Previously retrieved excerpts (iteration {i}/5):
                             {combined_excerpts}
+
+                            Additional excerpts:
+                            {iteration_excerpts}
+
+                            - If these excerpts combined with previous ones are sufficient to answer the query, provide the answer.
+                            - If more information is needed, wait for all 10 excerpts to be provided before answering.
+                            - Escalate to full paper retrieval only if the query requires the entire context of the paper to be answered accurately.
+
+                            Do not respond yet unless you believe the combined excerpts are sufficient.
+
                             """
                             response = chat_session.send_message(prompt)
                             answer = response.text.strip()
@@ -894,8 +912,9 @@ def rag_assistant(request, username):
                         # Final Iteration (5th) Prompt
                         if i == 4:
                             prompt = f"""
-                            Here are the final two excerpts (totaling 10). Now, determine if you can provide a satisfactory and accurate answer to the query based on the information in these 10 excerpts.
-                            If you can answer confidently (or if 75% of the answer can be generated from these excerpts), proceed. Otherwise, respond with 'NO10' only, without any additional context. Unless you dont have to absolutely give the 'NO10' to improve user experience where from query you absolutely know you need whole paper to answer this query, try to give relevent, detauled answer to the query.
+                            Here are the final excerpts (10 in total). Now that you have all available information from the database, determine whether you can provide a complete and accurate answer to the user's query.
+                            If you believe the provided excerpts are sufficient, generate an answer now. If the query inherently requires the full paper, escalate by responding with "NO10".
+
                             All Excerpts:
                             {combined_excerpts}
                             """
@@ -909,10 +928,18 @@ def rag_assistant(request, username):
                     top_paper = ResearchPaper.objects.get(id=top_paper_id)
                     print(f"No satisfactory answer found. Full PDF path: {top_paper.pdf_file}")
 
-                    answer = "Unable to find a complete answer in the excerpts. Refer to the full paper for more details."
+                    answer = """ 
+                    The following query could not be answered sufficiently using retrieved excerpts. Therefore, we are providing the full text of the most relevant paper.
+                    User Query: {refined_query}
+
+                    Full Paper Text:
+                    {full_paper_text}
+                    Please provide a detailed answer to the query based on the full context of the paper.
+
+                    """
 
                 # Format the output to include the paper titles
-                formatted_response = f"{answer}\n\nSources:\n"
+                formatted_response = answer
 
                 return JsonResponse({"message": formatted_response}, status=200)
 
