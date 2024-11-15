@@ -803,59 +803,24 @@ def rag_assistant(request, username):
             data = json.loads(request.body)
             start_time = time.time()
             query = data.get('query')
-            print("Original Query:", query)
-            classification,query=query_refiner(query)
-            print("Expanded Query using traditional NLP approaches:",query)
-            print("Query Type:",classification)
 
-            if not query:
+            # Refine the query and classify it
+            classification, refined_query = query_refiner(query)
+            print("Expanded Query using traditional NLP approaches:", refined_query)
+            print("Query Type:", classification)
+
+            if not refined_query:
                 return JsonResponse({"error": "No query provided"}, status=400)
-
-
-            # Convert the query to vector using the same embeddings model
-            query_embedding = embedding_model.embed_query(query)
-            # Access the research_papers collection in ChromaDB
-            collection = chroma_client.get_or_create_collection(name="research_papers")
-
-            # Query the top 3 results from ChromaDB
-            results = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=2
-            )
-
-            # print(f"Top 3 results retrieved from ChromaDB: {results}")
-
-            # Extract paper IDs and corresponding excerpts
-            paper_ids = [chunk_id.split('_')[0] for chunk_id in results['ids'][0]]
-            excerpts = [result for result in results['documents'][0]]
-
-            # Fetch titles of papers from the ResearchPaper model
-            papers = ResearchPaper.objects.filter(id__in=paper_ids)
-            paper_titles = {str(p.id): p.title for p in papers}
-
-            # Create excerpts for the prompt
-            paper_excerpts = " ".join(excerpts)
-
-            # Prepare the prompt for the Gemini API
-            prompt = f"""
-            Answer taking full below prompt in mind as a whole.
-            This is Users Query: {query},  Also check once if text excerpts provided satisfy the user query or not, if yes then generate normally and ignore this line, if the query is any general question like "Hii, how are you" or anything which doesnt relate to excerpts even slightly then only take query into consideration and answer accordingly, dont even mention excerpts or query just answer directly from query and ignore the rest of prompt. If someone asks you who are you , your name is Intellipaper Research Assistant.
-            Based on the following paper excerpts, provide a meaningful answer to the user's query. 
-            Please quote crucial sentences and show the titles of the papers from which the answers are extracted.
-            If no results obtained, give output from your own answer and show no excerpts found.
-            Text excerpts: 
-            {paper_excerpts}
-            """
 
             # Configure Gemini API key
             genai.configure(api_key=settings.GEMINI_API_KEY)
 
             # Define generation configuration
             generation_config = {
-                "temperature": 0.3,  
+                "temperature": 0.3,
                 "top_p": 0.95,
                 "top_k": 64,
-                "max_output_tokens": 15000,  # Increase the token limit if needed
+                "max_output_tokens": 80000,  # Increase the token limit if needed
                 "response_mime_type": "text/plain",
             }
 
@@ -865,32 +830,77 @@ def rag_assistant(request, username):
                 generation_config=generation_config,
             )
 
-            # Start a new chat session
-            chat_session = model.start_chat(history=[])
+            # Handle GENERAL classification
+            if classification == "GENERAL":
+                prompt = f"{refined_query}"
+                chat_session = model.start_chat(history=[])
+                response = chat_session.send_message(prompt)
+                end_time = time.time()  # End the clock
+                print(f"Time taken: {end_time - start_time:.2f} seconds")
+                answer = response.text.strip()
+                return JsonResponse({"message": answer}, status=200)
 
-            # Send the prompt to Gemini and get the response
-            response = chat_session.send_message(prompt)
-            end_time = time.time()  # End the clock
-            print(f"Time taken: {end_time - start_time:.2f} seconds")
-            answer = response.text.strip()
+            # Handle SCIENTIFIC classification
+            if classification == "SCIENTIFIC":
+                # Convert the query to vector using the same embeddings model
+                query_embedding = embedding_model.embed_query(refined_query)
 
-            # Format the output to include the paper titles
-            formatted_response = f"{answer}\n\nSources:\n"
-            added_titles = []  # List to keep track of added paper titles
-            for paper_id in paper_ids:
-                if paper_id in paper_titles:
-                    title = paper_titles[paper_id]
-                    if title not in added_titles:  # Check if the title is already added
-                        formatted_response += f"- {title}\n"
-                        added_titles.append(title)
+                # Access the research_papers collection in ChromaDB
+                collection = chroma_client.get_or_create_collection(name="research_papers")
 
-            return JsonResponse({"message": formatted_response}, status=200)
+                # Query the top results from ChromaDB
+                results = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=2
+                )
+
+                # Extract paper IDs and corresponding excerpts
+                paper_ids = [chunk_id.split('_')[0] for chunk_id in results['ids'][0]]
+                excerpts = [result for result in results['documents'][0]]
+
+                # Fetch titles of papers from the ResearchPaper model
+                papers = ResearchPaper.objects.filter(id__in=paper_ids)
+                paper_titles = {str(p.id): p.title for p in papers}
+
+                # Create excerpts for the prompt
+                paper_excerpts = " ".join(excerpts)
+
+                # Prepare the prompt for the Gemini API
+                prompt = f"""
+                Answer taking full below prompt in mind as a whole.
+                This is Users Query: {refined_query},  Also check once if text excerpts provided satisfy the user query or not, if yes then generate normally and ignore this line, if the query is any general question like "Hii, how are you" or anything which doesn't relate to excerpts even slightly then only take query into consideration and answer accordingly, don't even mention excerpts or query just answer directly from query and ignore the rest of prompt. If someone asks you who are you, your name is Intellipaper Research Assistant.
+                Based on the following paper excerpts, provide a meaningful answer to the user's query.
+                Please quote crucial sentences and show the titles of the papers from which the answers are extracted.
+                If no results obtained, give output from your own answer and show no excerpts found.
+                Text excerpts: 
+                {paper_excerpts}
+                """
+
+                # Start a new chat session
+                chat_session = model.start_chat(history=[])
+                response = chat_session.send_message(prompt)
+                end_time = time.time()  # End the clock
+                print(f"Time taken: {end_time - start_time:.2f} seconds")
+                answer = response.text.strip()
+
+                # Format the output to include the paper titles
+                formatted_response = f"{answer}\n\nSources:\n"
+                added_titles = []  # List to keep track of added paper titles
+                for paper_id in paper_ids:
+                    if paper_id in paper_titles:
+                        title = paper_titles[paper_id]
+                        if title not in added_titles:  # Check if the title is already added
+                            formatted_response += f"- {title}\n"
+                            added_titles.append(title)
+
+                return JsonResponse({"message": formatted_response}, status=200)
 
         except Exception as e:
             print(f"Error in RAG Assistant: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
 
 class GenerateCitationsView(View):
     def get(self, request, paper_id):
