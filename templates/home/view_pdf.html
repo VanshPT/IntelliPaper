@@ -238,10 +238,11 @@
     .then(response => response.json())
     .then(data => {
         // Update citations box with the returned data
+        const converter = new showdown.Converter();
         if (data.existing) {
-            citationsBox.innerHTML = customMarkdown(data.citations);  // Display existing citations
+            citationsBox.innerHTML = converter.makeHtml(data.citations);  // Display existing citations
         } else {
-            citationsBox.innerHTML = customMarkdown(data.citations);  // Display newly generated citations
+            citationsBox.innerHTML = converter.makeHtml(data.citations);  // Display newly generated citations
         }
     })
     .catch(error => {

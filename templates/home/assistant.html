@@ -9,15 +9,46 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/lib/marked.esm.js" integrity="sha512-50lTDS1rnOHdbzplG8w87C0xhRuf4f4fvMuGN0FCaFJbji//UOOLDIPnJLEe0glsYYzgMyfzZzKLS/9zzCFMZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/lib/marked.umd.js" integrity="sha512-XRM/dDs+vPBC8GmYAYoIVGQ3j9m1bVQqXMS1bfwJ1cCNBMJt/FCZYHeXj5r9dzUX7FX2/XAEbvo3SAVuIITnaQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
+    .main-container {
+        display: flex;
+        flex-direction: row;
+        height: 100vh;
+    }
     .chat-container {
+        flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        height: 100%;
         background-color: #0d1017;
         padding: 20px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+    .sidebar {
+        width: 250px;
+        background-color: #333;
+        color: #fff;
+        padding: 20px;
+        box-shadow: -4px 0 10px rgba(0, 0, 0, 0.4);
+        overflow-y: auto;
+    }
+    .sidebar h2 {
+        color: #ff7f50;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size:1.5rem;
+    }
+    .chat-item {
+        background-color: #444;
+        color: white;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .chat-item:hover {
+        background-color: #555;
     }
     .chat-box {
         width: 100%;
@@ -64,59 +95,38 @@
         color: #ff7f50;
         margin-bottom: 10px;
     }
-    .second-head {
+
+    #second-head{
+        font-size:1.8rem;
         color: #ff7f50;
-        font-size: 2.5rem;
-        font-weight: bold;
-        display: inline;
+        font-weight:bold;
     }
-    .user-input-box {
-    display: flex;
-    align-items: flex-end; /* Align button to the bottom */
-    width: 100%;
-}
-
-.input-field {
-    flex: 1;
-    padding: 10px;
-    border: 2px solid #ff7f50;
-    border-radius: 5px;
-    background-color: #2a2d40;
-    color: white;
-    font-size: 16px;
-    resize: none; /* Prevents manual resizing */
-    overflow-y: hidden; /* Hide scrollbar initially */
-}
-
-.send-btn {
-    margin-left: 10px;
-    padding: 10px 20px;
-    background-color: #ff7f50;
-    border: none;
-    border-radius: 5px;
-    color: #0d1017;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    height: auto; /* Keep button height fixed */
-    align-self: flex-end; /* Keeps button aligned with the bottom of the text box */
-}
-
 </style>
 {% endblock %}
 {% block body %}
-<div class="chat-container" style="overflow-y: auto;">
-    <div class="second-head" id="second-head"></div><span id="blinking-cursor">|</span>
-    <div class="chat-box" id="chat-box">
-        <p class="typing-indicator" id="typing-indicator">Assistant is typing...</p>
-        <!-- Chat content will be dynamically inserted here -->
+<div class="main-container">
+    
+    <!-- Chat area -->
+    <div class="chat-container" style="overflow-y: auto;">
+        <div class="second-head" id="second-head"></div><span id="blinking-cursor">|</span>
+        <div class="chat-box" id="chat-box">
+            <p class="typing-indicator" id="typing-indicator">Assistant is typing...</p>
+            <!-- Chat content will be dynamically inserted here -->
+        </div>
+        <div class="user-input-box">
+            <textarea class="input-field" id="user-input" name="query" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
+            <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
     </div>
-    <div class="user-input-box">
-        <textarea class="input-field" id="user-input" name="query" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
-        <button class="send-btn" onclick="sendMessage()">Send</button>
+    <!-- Sidebar for chat memory -->
+    <div class="sidebar">
+        <h2>Chat History</h2>
+        <div class="chat-item">Chat 1</div>
+        <div class="chat-item">Chat 2</div>
+        <div class="chat-item">Chat 3</div>
+        <!-- Additional chat items can be added here -->
     </div>
-
-
+    
 </div>
 {% endblock %}
 {% block js %}

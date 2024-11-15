@@ -156,14 +156,7 @@ def generate_citations(paper):
 
     # Extract only the first and last three pages
     num_pages = len(document)
-    relevant_pages = []
-
-    # Add first three pages
-    relevant_pages.extend(document[:5])  # Take the first three pages
-
-    # Add last three pages, ensuring not to exceed total pages
-    if num_pages > 3:
-        relevant_pages.extend(document[-5:])  # Take the last three pages
+    relevant_pages = document[:5] + document[-5:] if num_pages > 5 else document
 
     # Join page contents into full text
     full_text = "\n".join([page.page_content for page in relevant_pages])
@@ -173,10 +166,10 @@ def generate_citations(paper):
 
     # Define generation configuration
     generation_config = {
-        "temperature": 0.0,  # More deterministic responses
+        "temperature": 0.0,
         "top_p": 0.95,
-        "top_k": 64,
-        "max_output_tokens": 400,  # Adjust this based on expected response size
+        "top_k": 40,
+        "max_output_tokens": 4000,
         "response_mime_type": "text/plain",
     }
 
@@ -193,81 +186,77 @@ def generate_citations(paper):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1300, chunk_overlap=200)
     text_chunks = text_splitter.split_text(full_text)
 
-    # Prepare to send each chunk to the Gemini API
+    # Updated prompt template for strict citation format adherence
     prompt_template = """
-    Based on the following excerpts from a research paper, please consider the context of **all chunks** provided and generate citations in multiple specified formats. Ensure that you **wait until all chunks have been processed** before generating the final citations.
+    From the following excerpt, identify or generate citations in APA, MLA, Chicago, and Harvard formats.
+    Provide only the citations in the following structure, without any additional text or commentary:
+
+    - **APA Citation**: <APA citation here>
+    - **MLA Citation**: <MLA citation here>
+    - **Chicago Citation**: <Chicago citation here>
+    - **Harvard Citation**: <Harvard citation here>
+
     Excerpt:
     {chunk}
-    Once all chunks have been processed, provide the citations using the following formats:
-    **APA Citation**:
-    <p>...</p>
-
-    **MLA Citation**:
-    <p>...</p>
-
-    **Chicago Citation**:
-    <p>...</p>
-
-    **Harvard Citation**:
-    <p>...</p>
-
-    Make sure to find all available citation types from the excerpts provided, if citation not available in any of the above mentioned four formats in paper, then take the citations found and generate equivalent citation in that missing format and respond with the following structure:
-        - The **name** of the citation format in bold.
-        - The actual citation in the respective format after the name.
-    Please ensure the output includes all relevant citations in all four mentioned formats you found or generated after processing the chunks.
     """
 
-    # Counter for API calls
     api_call_count = 0
+    all_responses = []
 
-    # Iterate through each chunk and process
+    # Process each chunk individually
     for i, chunk in enumerate(text_chunks):
-        if chunk.strip():  # Check if the chunk is not empty
+        if chunk.strip():
             prompt = prompt_template.format(chunk=chunk)
             try:
-                # Send the prompt to Gemini and get the response
                 response = chat_session.send_message(prompt)
                 api_call_count += 1
 
-                # Log the response for debugging
-                logging.info(f"Processed chunk {i + 1}/{len(text_chunks)}: {response.text.strip()}")
+                # Collect each response for further processing
+                all_responses.append(response.text.strip())
 
-                # Sleep after every 5 API calls
+                # Sleep after every 5 API calls to avoid rate limiting
                 if api_call_count % 5 == 0:
-                    time.sleep(2)  # Sleep for 2 seconds
+                    time.sleep(2)
 
-                # Check if the response contains an error message
-                if "<p>Error generating final citations</p>" in response.text:
-                    logging.warning("Discarding response due to error message.")
-                    return None  # Discard and stop processing if error message is found
+                # Check for specific error patterns
+                if "Error generating" in response.text:
+                    logging.warning(f"Error detected in response for chunk {i + 1}, skipping this chunk.")
+                    continue
 
             except Exception as e:
-                logging.error(f"Error during LLM processing with Gemini for chunk {i + 1}: {e}")
+                logging.error(f"Error processing chunk {i + 1}: {e}")
 
-    # After processing all chunks, request the final citations
+    # Final prompt to consolidate citations
     final_prompt = """
-    Based on all the previously processed excerpts, please provide the citations in the following format:
-    <>APA Citation: ...</p>
-    <p>MLA Citation: ...</p>
-    <p>Chicago Citation: ...</p>
-    <p>Harvard Citation: ...</p>
+    Consolidate the following citations, ensuring all 4 formats (APA, MLA, Chicago, Harvard) are included.
+    Provide only the citations in this exact structure, without any additional text or commentary:
+
+    - **APA Citation**: <APA citation here>
+    - **MLA Citation**: <MLA citation here>
+    - **Chicago Citation**: <Chicago citation here>
+    - **Harvard Citation**: <Harvard citation here>
+
+    Previous responses:
+    {all_responses}
     """
 
+    # Format the responses to use in the final prompt
+    all_responses_text = "\n\n".join(all_responses)
+    final_prompt = final_prompt.format(all_responses=all_responses_text)
+
     try:
-        # Send the final prompt to get the citations
         final_response = chat_session.send_message(final_prompt)
         citations = final_response.text.strip()
 
-        # Check if the final response contains an error message
-        if "<p>Error generating final citations</p>" in citations:
-            logging.warning("Final citations response contained an error message. Discarding.")
-            return None  # Discard final citations if error message is found
+        # Final validation to ensure no error messages are in the response
+        if "Error generating" in citations:
+            logging.warning("Final response contained an error message.")
+            return None
     except Exception as e:
-        logging.error(f"Error during final LLM processing with Gemini: {e}")
-        return None  # Return None if there's an error
+        logging.error(f"Error in final citation generation: {e}")
+        return None
 
     return citations
-    
 
 # Function to fetch and parse research papers
 def fetch_research_papers(query, max_pages=3):

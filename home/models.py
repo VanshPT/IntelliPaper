@@ -16,7 +16,7 @@ class ResearchPaper(models.Model):
 class Citation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     paper = models.ForeignKey(ResearchPaper, on_delete=models.CASCADE, null=True, blank=True)
-    citations = models.TextField()
+    citations = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.paper.title
