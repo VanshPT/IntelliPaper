@@ -62,34 +62,39 @@
         font-size: 16px;
     }
     .user-input-box {
-        display: flex;
-        width: 100%;
-        margin-top: 20px;
-    }
-    .input-field {
-        flex: 1;
-        padding: 10px;
-        border: 2px solid #ff7f50;
-        border-radius: 5px;
-        background-color: #2a2d40;
-        color: white;
-        font-size: 16px;
-        height: 50px;
-    }
-    .send-btn {
-        margin-left: 10px;
-        padding: 10px 20px;
-        background-color: #ff7f50;
-        border: none;
-        border-radius: 5px;
-        color: #0d1017;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-    .send-btn:hover {
-        background-color: #ff5733;
-    }
+    display: flex;
+    width: 100%;
+    margin-top: 20px;
+    align-items: flex-start; /* Align items at the start to prevent button growth */
+}
+
+.input-field {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #ff7f50;
+    border-radius: 5px;
+    background-color: #2a2d40;
+    color: white;
+    font-size: 16px;
+    resize: none; /* Prevent manual resizing by the user */
+}
+
+.send-btn {
+    margin-left: 10px;
+    padding: 10px 20px;
+    background-color: #ff7f50;
+    border: none;
+    border-radius: 5px;
+    color: #0d1017;
+    font-size: 16px;
+    cursor: pointer;
+    height: 50px; /* Set a fixed height */
+    transition: background-color 0.3s ease;
+}
+.send-btn:hover {
+    background-color: #ff5733;
+}
+
     .typing-indicator {
         font-style: italic;
         color: #ff7f50;
@@ -114,9 +119,10 @@
             <!-- Chat content will be dynamically inserted here -->
         </div>
         <div class="user-input-box">
-            <textarea class="input-field" id="user-input" name="query" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
-            <button class="send-btn" onclick="sendMessage()">Send</button>
-        </div>
+    <textarea class="input-field" id="user-input" name="query" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
+    <button class="send-btn" onclick="sendMessage()">Send</button>
+</div>
+
     </div>
     <!-- Sidebar for chat memory -->
     <div class="sidebar">
