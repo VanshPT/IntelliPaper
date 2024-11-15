@@ -68,7 +68,8 @@ class ChatConversation(models.Model):
 class ChatQueryResponse(models.Model):
     rid=models.BigAutoField(primary_key=True)
     cid=models.ForeignKey(ChatConversation, on_delete=models.CASCADE)
-    text=models.TextField(blank=True, null=True)
+    query=models.TextField(blank=True, null=True)
+    response=models.TextField(blank=True, null=True)
     timestamp=models.DateTimeField(auto_now_add=True)    
     
     

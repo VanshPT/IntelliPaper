@@ -9,7 +9,7 @@ import io
 import re
 import json
 from django.conf import settings
-from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument, Citation
+from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument, Citation, ChatConversation, ChatQueryResponse
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from django.contrib import messages
@@ -290,11 +290,13 @@ def render_search_paper(request, username):
 @login_required
 def render_assistant(request, username):
     user = request.user
+    chats=ChatConversation.objects.all()
     context = {
         'username': user.username,
         'first_name': user.first_name,
         'last_name': user.last_name,
-        'email': user.email
+        'email': user.email,
+        'chats':chats
     }
     return render(request, 'home/assistant.html', context)
 
@@ -1049,3 +1051,32 @@ def web_search(request):
         'query': query,
     }
     return render(request, 'home/search_web_papers.html', context)
+
+def save_chat_message(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            chat_id = data.get("chat_id")
+            query = data.get("query")
+            response = data.get("response")
+
+            # If chat_id is None, create a new ChatConversation
+            if not chat_id:
+                title = query[:50] if len(query) > 50 else query  # Use the query as the title (truncated)
+                chat = ChatConversation.objects.create(title=title)
+                chat_id = chat.cid
+            else:
+                # Retrieve the existing chat
+                chat = get_object_or_404(ChatConversation, cid=chat_id)
+
+            # Save the query and response in ChatQueryResponse
+            ChatQueryResponse.objects.create(
+                cid=chat, query=query, response=response
+            )
+
+            return JsonResponse({"success": True, "chat_id": chat_id})
+
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request method"})

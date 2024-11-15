@@ -20,11 +20,13 @@ urlpatterns = [
     path('delete_paper/<str:username>/<int:id>/', views.delete_paper, name="render_history"),
     path('delete_paper1/<str:username>/<int:id>/', views.delete_paper1, name="render_history"),
     path('api/rename_readlist', views.rename_readlist, name='rename_readlist'),
+    path('api/save_chat_message/', views.save_chat_message, name='save_chat_message'),
     path('view_pdf/<int:id>/', views.render_pdf_viewer, name="render_pdf_viewer"),
     path('view_pdf/<int:id>/generate_summary/', views.generate_summary, name="generate_summary"),
     path('view_pdf/notes/<int:id>/', views.render_pdf_notes, name="render_pdf_notes"),
     path('view_pdf/<int:paper_id>/generate_citations/', views.GenerateCitationsView.as_view(), name='generate_citations'),
     path('save_notes/<str:username>/<int:paper_id>/', views.save_notes, name='save_notes'),
     path('search/', views.search_engine, name="search"),
-    path('web-search/', views.web_search,name="Web Search" )
+    path('web-search/', views.web_search,name="Web Search" ),
+    
 ]
