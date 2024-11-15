@@ -29,3 +29,4 @@ wheel
 chromadb
 python-decouple
 beautifulsoup4
+textblob

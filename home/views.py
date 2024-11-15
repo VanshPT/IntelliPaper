@@ -22,7 +22,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import time
 import requests
 from rank_bm25 import BM25Okapi
-from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations, fetch_research_papers
+from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations, fetch_research_papers, query_refiner
 import nltk
 from django.core.paginator import Paginator
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -801,7 +801,12 @@ def rag_assistant(request, username):
         try:
             # Get the JSON body from the request
             data = json.loads(request.body)
+            start_time = time.time()
             query = data.get('query')
+            print("Original Query:", query)
+            classification,query=query_refiner(query)
+            print("Expanded Query using traditional NLP approaches:",query)
+            print("Query Type:",classification)
 
             if not query:
                 return JsonResponse({"error": "No query provided"}, status=400)
@@ -815,7 +820,7 @@ def rag_assistant(request, username):
             # Query the top 3 results from ChromaDB
             results = collection.query(
                 query_embeddings=[query_embedding],
-                n_results=3
+                n_results=2
             )
 
             # print(f"Top 3 results retrieved from ChromaDB: {results}")
@@ -865,6 +870,8 @@ def rag_assistant(request, username):
 
             # Send the prompt to Gemini and get the response
             response = chat_session.send_message(prompt)
+            end_time = time.time()  # End the clock
+            print(f"Time taken: {end_time - start_time:.2f} seconds")
             answer = response.text.strip()
 
             # Format the output to include the paper titles

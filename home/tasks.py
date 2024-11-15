@@ -52,7 +52,7 @@ def process_pdf_documents():
             print(f"Extracted text for paper ID {paper.id}: {full_text[:200]}...")
 
             # Split the text into chunks
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=500)
             text_chunks = text_splitter.split_text(full_text)
             print(f"Created {len(text_chunks)} chunks for paper ID {paper.id}")
 
