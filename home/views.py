@@ -926,17 +926,81 @@ def rag_assistant(request, username):
                     print("NO10")
                     top_paper_id = paper_ids[0]
                     top_paper = ResearchPaper.objects.get(id=top_paper_id)
-                    print(f"No satisfactory answer found. Full PDF path: {top_paper.pdf_file}")
+                    loader = PyPDFLoader(file_path=top_paper.pdf_file.path)
+                    pages = loader.load()
+                    chunks = [page.page_content for page in pages]
+                    retry_delay = 5  # Seconds to wait between retries if rate-limited
+                    max_retries = 5  # Max number of retries after hitting the rate limit
+                    
+                    # Define the prompt template for processing larger combined chunks
+                    chunk_prompt_template = """
+                    You are analyzing a research paper to answer a user's query. Below is a chunk from the paper:
 
-                    answer = """ 
-                    The following query could not be answered sufficiently using retrieved excerpts. Therefore, we are providing the full text of the most relevant paper.
-                    User Query: {refined_query}
+                    {chunk}
 
-                    Full Paper Text:
-                    {full_paper_text}
-                    Please provide a detailed answer to the query based on the full context of the paper.
+                    Instructions:
+                    1. Analyze the content of this chunk carefully and extract all relevant information that might contribute to answering the user's query.
+                    2. Do not provide an answer yet. Instead, store and remember the context from this chunk for future reference.
+                    3. When the user query is provided, consider all the chunks you have analyzed and synthesize a comprehensive response based on the complete context.
 
+                    Important:
+                    - Ensure the final answer aligns with the user's query expectations and provides detailed, accurate, and contextually rich information.
+                    - If any crucial information is missing after analyzing all chunks, indicate this explicitly when generating the response.
+
+                    Wait for the user's query before formulating your final answer.
                     """
+                    def send_with_retry(prompt, retries=0):
+                        try:
+                            return chat_session.send_message(prompt)
+                        except Exception as e:
+                            if '429' in str(e) and retries < max_retries:
+                                logger.warning(f"Rate limit hit. Retrying in {retry_delay} seconds...")
+                                time.sleep(retry_delay)
+                                return send_with_retry(prompt, retries + 1)
+                            else:
+                                logger.error(f"Error during LLM processing with Gemini: {e}")
+                                raise
+                            
+                    batch_size = 5  # Increase this number to reduce API calls (experiment with optimal size)
+                    batched_chunks = [' '.join(chunks[i:i+batch_size]) for i in range(0, len(chunks), batch_size)]
+
+                    # Process each batch of chunks
+                    for batch in batched_chunks:
+                        try:
+                            batch_prompt = chunk_prompt_template.format(chunk=batch)
+                            send_with_retry(batch_prompt)
+                        except Exception as e:
+                            return JsonResponse({"error": "An error occurred during batch processing."}, status=500)
+                            
+                    # After all chunks are processed, request a final summary
+                    summary_prompt = f"""
+                    Now that all chunks have been analyzed, here is the user's query you need to answer: {query}
+
+                    Instructions:
+                    1. Use all the processed chunks to generate a comprehensive and well-structured answer that directly addresses the user's query.
+                    2. Organize the answer into clear, concise paragraphs and include bullet points where appropriate to improve readability.
+                    3. Ensure the response is tailored to meet the user's expectations:
+                        - Provide accurate and detailed information derived from the processed chunks.
+                        - Use examples, explanations, or comparisons when necessary to clarify key points.
+                    4. Make the response engaging and accessible to both technical and non-technical audiences:
+                        - Briefly explain any specialized or technical terms immediately after introducing them.
+                        - Use a logical flow to present the information, ensuring clarity and coherence.
+                    5. If there are any gaps or missing information required to fully answer the query, explicitly acknowledge them in the response.
+
+                    Formatting Guidelines:
+                        - Highlight critical points using bullet points or numbered lists where applicable.
+                        - Use concise paragraphs to break down complex concepts and ensure clarity.
+                        - Avoid including irrelevant or redundant information from the chunks.
+
+                    Generate your answer based on these instructions, ensuring it aligns with the user query and provides maximum value and clarity.
+                    """
+
+                    # Send the final summary request with retry logic
+                    final_summary_response = send_with_retry(summary_prompt)
+                    # Extract the main summary text from the response using regex (optional clean-up)
+                    raw_summary = final_summary_response.text
+
+                    answer = raw_summary
 
                 # Format the output to include the paper titles
                 formatted_response = answer
