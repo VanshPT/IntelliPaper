@@ -4,13 +4,12 @@ from django_q.tasks import async_task
 import chromadb
 from .models import ResearchPaper
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders.pdf import PyPDFLoader
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
 from django.conf import settings
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 from .views import prepare_custom_documents, intelligent_clustering_via_gemini, save_clusters_gemini_based
 from django.contrib.auth.models import User
-
+from langchain_google_genai import GoogleGenerativeAIEmbeddings,GoogleGenerativeAI
 # Initialize ChromaDB client
 chroma_client = chromadb.PersistentClient(
     path=os.path.join(settings.BASE_DIR, 'chromadb_storage'),
@@ -23,7 +22,7 @@ chroma_client = chromadb.PersistentClient(
 logger = logging.getLogger(__name__)
 
 # Initialize HuggingFace embeddings model
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+embedding_model = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=settings.GEMINI_API_KEY)
 
 def process_pdf_documents():
     """Check if all papers have vectors stored for all their blocks in ChromaDB, and update as necessary."""

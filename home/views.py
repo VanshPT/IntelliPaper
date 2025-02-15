@@ -9,8 +9,8 @@ import io
 import re
 import json
 from django.conf import settings
-from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument, Citation, ChatConversation, ChatQueryResponse
-from langchain.document_loaders import PyPDFLoader
+from .models import ResearchPaper, Folder, Readlist, Notes, VectorDocument, Citation, Chat, UserSession
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from django.contrib import messages
 import google.generativeai as genai
@@ -22,11 +22,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 import time
 import requests
 from rank_bm25 import BM25Okapi
-from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations, fetch_research_papers, query_refiner
+from .helper import get_synonyms,get_contextual_terms, get_phrases, generate_citations, fetch_research_papers, refine_query, get_or_create_session,get_session_history
 import nltk
 from django.core.paginator import Paginator
-from langchain.embeddings import HuggingFaceEmbeddings
 import chromadb
+from langchain_google_genai import GoogleGenerativeAIEmbeddings,GoogleGenerativeAI
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 # from langchain_community.llms import Ollama
 #below are imports for running async tasks
@@ -290,16 +292,14 @@ def render_search_paper(request, username):
 @login_required
 def render_assistant(request, username):
     user = request.user
-    chats=ChatConversation.objects.all()
+    
     context = {
         'username': user.username,
         'first_name': user.first_name,
         'last_name': user.last_name,
         'email': user.email,
-        'chats':chats
     }
     return render(request, 'home/assistant.html', context)
-
 
 
 
@@ -524,16 +524,28 @@ def intelligent_clustering_via_gemini(paper_docs):
 
     # Create the prompt for Gemini API
     prompt_template = """
-    You are given a list of research papers where each entry consists of an ID, a title, and an abstract (the first part is the ID, followed by the title and a portion of the abstract). Your task is to cluster these papers based on their topics.
+    You are tasked with clustering a collection of research papers submitted by users on our research assistant platform. Each entry in the collection consists of an ID, a title, and a portion of the abstract (the first part is the ID, followed by the title and a snippet of the abstract). Your job is to group these papers into meaningful clusters based on their topics.  
 
-The output should strictly follow this format:
-cluster_name_1: [id1, id3]
-cluster_name_2: [id2, id5]
+The goal is to create a user-friendly experience by generating clusters that serve both broad and specific research needs:  
 
-Please make sure you only use the IDs (the numbers at the start of each entry) in the output clusters. Do not include titles or explanations, just return the cluster names and the list of corresponding IDs in the format shown above. Also note one paper can be clustered into multiple folders also. let me give you an example you should cluster like that. lets say we got three papers based on fire detecton system project usign ml or dl or lany other techniques, so one cluster should definitely be named fire detection system which should have all these ids of papers related to this topic, also they can be part of another paper, in short best experience should be provided to a real life user use case, if i am making a good project on some topic and researching multiple aproaches, one folder should compulsarily be found there containing all the papers uploaded regarding that project topic. so clusters with such project based like clustering should also be there and also clusters which little broad range of clustering both types of clusters. Best User experience should always be provided, if i am researching on some project topic you have to intelligently give a cluster based on this topic. Also numbers of clusters generated should be minimal only important ones while still giving proper clusters.
+1. **Broad-Level Clusters**: Include general categories like "Machine Learning," "Artificial Intelligence," "Blockchain," etc., where papers related to these overarching themes are grouped together.  
 
-Here are the documents:
+2. **Project-Specific Clusters**: Create focused clusters that align with specific topics or projects. For example, if multiple papers discuss "Fire Detection using Machine Learning," there should be a cluster named "Fire Detection" containing all related papers. These clusters should help users easily organize papers relevant to specific research projects or subtopics.  
+
+Ensure the following:  
+- A single paper can belong to multiple clusters if it is relevant to different topics.  
+- Minimize the number of clusters while still maintaining clarity and relevance.  
+- Always prioritize creating clusters that will provide the best user experience, helping users easily locate papers related to their research interests or projects.  
+
+The output should strictly follow this format:  
+cluster_name_1: [id1, id3]  
+cluster_name_2: [id2, id5]  
+
+Use only the IDs (the numbers at the start of each entry) in the output clusters. Do not include titles, abstracts, or explanations. Ensure the clusters are meaningful, concise, and aligned with the needs of real-world research use cases.  
+
+Here are the documents:  
 {paper_docs}
+
     """
 
     # Create the prompt with paper documents
@@ -788,7 +800,7 @@ def expand_query(query):
     return list(expanded_terms)
 
 
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+embedding_model = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=settings.GEMINI_API_KEY)
 
 chroma_client = chromadb.PersistentClient(
     path=os.path.join(settings.BASE_DIR, 'chromadb_storage'),
@@ -797,223 +809,172 @@ chroma_client = chromadb.PersistentClient(
     database=DEFAULT_DATABASE,
 )
 
+
+
+def get_context(refined_query, n):
+    query_embedding = embedding_model.embed_query(refined_query)
+    collection = chroma_client.get_or_create_collection(name="research_papers")
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=n  
+    )
+    # Extract the text chunks from the results dictionary
+    text_chunks = results.get("documents", [])
+    return text_chunks
+
+
+@login_required
+def load_chats(request):
+    print("load_chats view called")  # Debugging
+    if request.method == 'POST':
+        try:
+            print('check1')
+            user = User.objects.get(username=request.user)
+            chats = Chat.objects.filter(session__user=user).order_by('timestamp')
+            chat_list = [
+                {"question": chat.question, "answer": chat.answer}
+                for chat in chats
+            ]
+            print(f"Chat List: {chat_list}")  # Debugging
+            return JsonResponse({"chats": chat_list})  # Ensure JsonResponse is used
+        except Exception as e:
+            print(f"Error in load_chats: {str(e)}")  # Debugging
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        print("Invalid request method in load_chats")  # Debugging
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@login_required
+def delete_chats(request):
+    print('delete chats view activated')
+    if request.method == 'POST':
+        try:
+            # Get the current user
+            user = request.user
+            
+            # Find all UserSession objects for the user
+            user_sessions = UserSession.objects.filter(user=user)
+            
+            # Delete all chats associated with the user's sessions
+            deleted_count = 0
+            for session in user_sessions:
+                # Delete all Chat objects for this session
+                count, _ = session.chats.all().delete()
+                deleted_count += count
+            
+            # Log the deletion
+            print(f"Deleted {deleted_count} chats for user: {user.username}")
+            
+            # Return success response
+            return JsonResponse({
+                "success": True,
+                "message": f"Deleted {deleted_count} chat(s)."
+            })
+        except Exception as e:
+            # Log the error
+            print(f"Error deleting chats for user {user.username}: {str(e)}")
+            return JsonResponse({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    else:
+        # Handle invalid request methods
+        return JsonResponse({
+            "success": False,
+            "error": "Invalid request method. Use POST."
+        }, status=405)
+    
+
+
+genai.configure(api_key=settings.GEMINI_API_KEY)
 @login_required
 def rag_assistant(request, username):
     if request.method == 'POST':
         try:
-            # Get the JSON body from the request
             data = json.loads(request.body)
-            start_time = time.time()
             query = data.get('query')
+            print(query)
+            if not query:
+                return JsonResponse({"error": "Query is required"}, status=400)
+            
+            # Retrieve session info and refine query based on conversation history.
+            session_id = get_or_create_session(username)
+            session=UserSession.objects.get(session_id=session_id)
+            refined_query = refine_query(session_id, query)
+            history= get_session_history(session_id)
+            context = get_context(refined_query, 8)
+            # Build the LangChain prompt template with detailed instructions.
+            prompt_template = PromptTemplate(
+                input_variables=["chat_history", "context", "user_query"],
+                template="""
+### Conversation History:
+{chat_history}
 
-            # Refine the query and classify it
-            classification, refined_query = query_refiner(query)
-            print("Expanded Query using traditional NLP approaches:", refined_query)
-            print("Query Type:", classification)
+### Context (Relevant excerpts from research articles):
+{context}
 
-            if not refined_query:
-                return JsonResponse({"error": "No query provided"}, status=400)
+### User Query:
+{user_query}
 
-            # Configure Gemini API key
-            genai.configure(api_key=settings.GEMINI_API_KEY)
+### Instructions:(these are system instructions, dont reply or react to them just follow them. answer only to {user_query})
+1. First, review the conversation history to understand the background.
+2. If the user query is a generic statement (e.g., "ok", "thank you", "alright") that doesn't require context, respond in a friendly and generic manner without relying on the provided context.
+3. If the user is asking a question and the answer is present in the context, extract and use the relevant information.
+4.
+    When encountering technical or scientific terms in the context that may be unfamiliar to a general audience, provide a brief explanation in parentheses immediately after the term. This includes terms that are specific to certain communities or fields (e.g., "Fine Tuning" in the context of AI). Ensure that the explanation is concise, clear, and accessible to someone without a specialized background.
 
-            # Define generation configuration
-            generation_config = {
-                "temperature": 1,
-                "top_p": 0.95,
-                "top_k": 64,
-                "max_output_tokens": 80000,  # Adjust the token limit if needed
-                "response_mime_type": "text/plain",
-            }
+    Examples:
 
-            # Initialize the Gemini model
-            model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                generation_config=generation_config,
+    If the term "Fine Tuning" appears, explain it as: "Fine Tuning (a process in AI where a pre-trained model is further trained on a specific dataset to improve its performance on a particular task)."
+
+    If the term "Neural Network" appears, explain it as: "Neural Network (a system of algorithms designed to recognize patterns, modeled loosely after the human brain)."
+
+    Goal:
+    Make the response inclusive and understandable for readers from diverse backgrounds, ensuring that no technical term is left unexplained.
+5. Use bullet points if summarizing multiple points.
+6. Keep the answer concise, clear, and accessible for someone without an academic background.
+7. Always consider the conversation history first, then the context.
+8. if user asks your name, respond I am your research assistant. I will answer your queries related to your research articles in an easy and engaging manner. Dont repeat exact same sentence make up your own sentence for this while generating.
+9. Keep answers in depth and explanatory, dont shy away from giving long answers.
+    
+Provide only the final answer.
+"""
             )
-
-            # Handle GENERAL classification
-            if classification == "GENERAL":
-                prompt = f"{refined_query}"
-                chat_session = model.start_chat(history=[])
-                response = chat_session.send_message(prompt)
-                end_time = time.time()
-                print(f"Time taken: {end_time - start_time:.2f} seconds")
-                answer = response.text.strip()
-                return JsonResponse({"message": answer}, status=200)
-
-            # Handle SCIENTIFIC classification
-            if classification == "SCIENTIFIC":
-                # Convert the query to vector using the same embeddings model
-                query_embedding = embedding_model.embed_query(refined_query)
-
-                # Access the research_papers collection in ChromaDB
-                collection = chroma_client.get_or_create_collection(name="research_papers")
-
-                # Query the top results from ChromaDB
-                results = collection.query(
-                    query_embeddings=[query_embedding],
-                    n_results=10  # Retrieve top 10 results for the fallback mechanism
-                )
-
-                # Extract paper IDs and corresponding excerpts
-                paper_ids = [chunk_id.split('_')[0] for chunk_id in results['ids'][0]]
-                excerpts = [result for result in results['documents'][0]]
-
-                # Step 1: Primary Retrieval with Initial 2 Excerpts
-                initial_excerpts = " ".join(excerpts[:2])
-                prompt = f"""
-                User Query: {query}
-
-                Below are two excerpts retrieved from the database. Determine whether these excerpts contain sufficient information to answer the query fully. 
-                - If the answer can be generated using these excerpts, provide the answer.
-                - If the excerpts are entirely irrelevant or lack key details needed to answer the query, respond with "NO" without providing further context.
-
-                Excerpts:
-                {initial_excerpts}
-
-                Important: If the excerpts provide even partial information related to the query, generate a meaningful response based on them.
-
-                """
-                chat_session = model.start_chat(history=[])
-                response = chat_session.send_message(prompt)
-                answer = response.text.strip()
-
-                # Step 2: Secondary Retrieval (5 Iterations with 2 Excerpts Each)
-                if "NO" in answer:
-                    print("NO")
-                    combined_excerpts = ""
-                    for i in range(0, 5):  # Iterate 5 times in total
-                        start_idx = i * 2
-                        end_idx = start_idx + 2
-                        iteration_excerpts = " ".join(excerpts[start_idx:end_idx])
-                        combined_excerpts += f"\n{iteration_excerpts}"
-
-                        # Iteration-specific prompt
-                        if i < 4:
-                            prompt = f"""
-                            This is iteration {i + 1}/5 of additional context for the user's query.Query is {query} Below are two more excerpts retrieved to expand on the previous context.
-                            Previously retrieved excerpts (iteration {i}/5):
-                            {combined_excerpts}
-
-                            Additional excerpts:
-                            {iteration_excerpts}
-
-                            - If these excerpts combined with previous ones are sufficient to answer the query, provide the answer.
-                            - If more information is needed, wait for all 10 excerpts to be provided before answering.
-                            - Escalate to full paper retrieval only if the query requires the entire context of the paper to be answered accurately.
-
-                            Do not respond yet unless you believe the combined excerpts are sufficient.
-
-                            """
-                            response = chat_session.send_message(prompt)
-                            answer = response.text.strip()
-
-                          
-
-                        # Final Iteration (5th) Prompt
-                        if i == 4:
-                            prompt = f"""
-                            Here are the final excerpts (10 in total). Now that you have all available information from the database, determine whether you can provide a complete and accurate answer to the user's query.
-                            If you believe the provided excerpts are sufficient, generate an answer now. If the query inherently requires the full paper, escalate by responding with "NO10".
-
-                            All Excerpts:
-                            {combined_excerpts}
-                            """
-                            response = chat_session.send_message(prompt)
-                            answer = response.text.strip()
-
-                # Step 3: Third Fallback (Fetch Full PDF) if "NO10" is received
-                if "NO10" in answer:
-                    print("NO10")
-                    top_paper_id = paper_ids[0]
-                    top_paper = ResearchPaper.objects.get(id=top_paper_id)
-                    loader = PyPDFLoader(file_path=top_paper.pdf_file.path)
-                    pages = loader.load()
-                    chunks = [page.page_content for page in pages]
-                    retry_delay = 5  # Seconds to wait between retries if rate-limited
-                    max_retries = 5  # Max number of retries after hitting the rate limit
-                    
-                    # Define the prompt template for processing larger combined chunks
-                    chunk_prompt_template = """
-                    You are analyzing a research paper to answer a user's query. Below is a chunk from the paper:
-
-                    {chunk}
-
-                    Instructions:
-                    1. Analyze the content of this chunk carefully and extract all relevant information that might contribute to answering the user's query.
-                    2. Do not provide an answer yet. Instead, store and remember the context from this chunk for future reference.
-                    3. When the user query is provided, consider all the chunks you have analyzed and synthesize a comprehensive response based on the complete context.
-
-                    Important:
-                    - Ensure the final answer aligns with the user's query expectations and provides detailed, accurate, and contextually rich information.
-                    - If any crucial information is missing after analyzing all chunks, indicate this explicitly when generating the response.
-
-                    Wait for the user's query before formulating your final answer.
-                    """
-                    def send_with_retry(prompt, retries=0):
-                        try:
-                            return chat_session.send_message(prompt)
-                        except Exception as e:
-                            if '429' in str(e) and retries < max_retries:
-                                logger.warning(f"Rate limit hit. Retrying in {retry_delay} seconds...")
-                                time.sleep(retry_delay)
-                                return send_with_retry(prompt, retries + 1)
-                            else:
-                                logger.error(f"Error during LLM processing with Gemini: {e}")
-                                raise
-                            
-                    batch_size = 5  # Increase this number to reduce API calls (experiment with optimal size)
-                    batched_chunks = [' '.join(chunks[i:i+batch_size]) for i in range(0, len(chunks), batch_size)]
-
-                    # Process each batch of chunks
-                    for batch in batched_chunks:
-                        try:
-                            batch_prompt = chunk_prompt_template.format(chunk=batch)
-                            send_with_retry(batch_prompt)
-                        except Exception as e:
-                            return JsonResponse({"error": "An error occurred during batch processing."}, status=500)
-                            
-                    # After all chunks are processed, request a final summary
-                    summary_prompt = f"""
-                    Now that all chunks have been analyzed, here is the user's query you need to answer: {query}
-
-                    Instructions:
-                    1. Use all the processed chunks to generate a comprehensive and well-structured answer that directly addresses the user's query.
-                    2. Organize the answer into clear, concise paragraphs and include bullet points where appropriate to improve readability.
-                    3. Ensure the response is tailored to meet the user's expectations:
-                        - Provide accurate and detailed information derived from the processed chunks.
-                        - Use examples, explanations, or comparisons when necessary to clarify key points.
-                    4. Make the response engaging and accessible to both technical and non-technical audiences:
-                        - Briefly explain any specialized or technical terms immediately after introducing them.
-                        - Use a logical flow to present the information, ensuring clarity and coherence.
-                    5. If there are any gaps or missing information required to fully answer the query, explicitly acknowledge them in the response.
-
-                    Formatting Guidelines:
-                        - Highlight critical points using bullet points or numbered lists where applicable.
-                        - Use concise paragraphs to break down complex concepts and ensure clarity.
-                        - Avoid including irrelevant or redundant information from the chunks.
-
-                    Generate your answer based on these instructions, ensuring it aligns with the user query and provides maximum value and clarity.
-                    """
-
-                    # Send the final summary request with retry logic
-                    final_summary_response = send_with_retry(summary_prompt)
-                    # Extract the main summary text from the response using regex (optional clean-up)
-                    raw_summary = final_summary_response.text
-
-                    answer = raw_summary
-
-                # Format the output to include the paper titles
-                formatted_response = answer
-
-                return JsonResponse({"message": formatted_response}, status=200)
-
+            
+            
+            # Create the Gemini LLM instance using LangChain's GoogleGenerativeAI wrapper.
+            gemini_llm = GoogleGenerativeAI(
+                model="gemini-1.5-pro",
+                temperature=1,
+                top_p=0.95,
+                top_k=50,
+                max_output_tokens=500000,
+                google_api_key=settings.GEMINI_API_KEY
+            )
+            
+            # Create the LLMChain with the prompt template and the Gemini LLM.
+            chain = LLMChain(llm=gemini_llm, prompt=prompt_template)
+            # Execute the chain using conversation history, context, and the refined user query.
+            final_response = chain.run(
+                chat_history=history,
+                context=context,
+                user_query=query
+            )
+            Chat.objects.create(
+                session=session,
+                question=query,
+                answer=final_response
+            )
+            return JsonResponse({"message": final_response})
         except Exception as e:
-            print(f"Error in RAG Assistant: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+
 
 
 class GenerateCitationsView(View):
@@ -1052,31 +1013,3 @@ def web_search(request):
     }
     return render(request, 'home/search_web_papers.html', context)
 
-def save_chat_message(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            chat_id = data.get("chat_id")
-            query = data.get("query")
-            response = data.get("response")
-
-            # If chat_id is None, create a new ChatConversation
-            if not chat_id:
-                title = query[:50] if len(query) > 50 else query  # Use the query as the title (truncated)
-                chat = ChatConversation.objects.create(title=title)
-                chat_id = chat.cid
-            else:
-                # Retrieve the existing chat
-                chat = get_object_or_404(ChatConversation, cid=chat_id)
-
-            # Save the query and response in ChatQueryResponse
-            ChatQueryResponse.objects.create(
-                cid=chat, query=query, response=response
-            )
-
-            return JsonResponse({"success": True, "chat_id": chat_id})
-
-        except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)})
-
-    return JsonResponse({"success": False, "error": "Invalid request method"})

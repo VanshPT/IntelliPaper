@@ -58,18 +58,17 @@ class Notes(models.Model):
         return f'Notes for {self.paper.title} by {self.user.username}'
     
     
-class ChatConversation(models.Model):
-    cid=models.BigAutoField(primary_key=True)
-    title=models.CharField(max_length=250)
-    
-    def  __str__(self):
-        return self.title 
-    
-class ChatQueryResponse(models.Model):
-    rid=models.BigAutoField(primary_key=True)
-    cid=models.ForeignKey(ChatConversation, on_delete=models.CASCADE)
-    query=models.TextField(blank=True, null=True)
-    response=models.TextField(blank=True, null=True)
-    timestamp=models.DateTimeField(auto_now_add=True)    
-    
+class UserSession(models.Model):
+    user=models.ForeignKey(User, on_delete=models.CASCADE)
+    session_id = models.CharField(max_length=255, unique=True)
+
+class Chat(models.Model):
+    session = models.ForeignKey(UserSession, on_delete=models.CASCADE, related_name="chats")
+    question = models.TextField()
+    answer = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Chat {self.id} - {self.timestamp}"
+
     

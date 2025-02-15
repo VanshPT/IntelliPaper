@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path('', views.landing, name="landing"),
+    path('assistant/fetch_chat_messages/', views.load_chats, name='fetch_chat_messages'),
+    path('assistant/delete_chats/', views.delete_chats, name='delete_chats'),
     path('dashboard/<str:username>/', views.render_dashboard, name="render_dashboard"),
     path('auto_cluster/<str:username>/', views.render_auto_cluster, name="render_auto_cluster"),
     path('auto_cluster/<str:username>/cluster/', views.auto_cluster, name="auto_cluster"),
@@ -20,7 +22,6 @@ urlpatterns = [
     path('delete_paper/<str:username>/<int:id>/', views.delete_paper, name="render_history"),
     path('delete_paper1/<str:username>/<int:id>/', views.delete_paper1, name="render_history"),
     path('api/rename_readlist', views.rename_readlist, name='rename_readlist'),
-    path('api/save_chat_message/', views.save_chat_message, name='save_chat_message'),
     path('view_pdf/<int:id>/', views.render_pdf_viewer, name="render_pdf_viewer"),
     path('view_pdf/<int:id>/generate_summary/', views.generate_summary, name="generate_summary"),
     path('view_pdf/notes/<int:id>/', views.render_pdf_notes, name="render_pdf_notes"),

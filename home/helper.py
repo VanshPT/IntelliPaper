@@ -8,12 +8,17 @@ import spacy
 import numpy as np
 import google.generativeai as genai
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders.pdf import PyPDFLoader
-from textblob import TextBlob
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_google_genai import GoogleGenerativeAIEmbeddings,GoogleGenerativeAI
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 import time
 import json
+import uuid
+from .models import UserSession,Chat
+from django.contrib.auth.models import User
 
 # nltk.download('wordnet') #UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
 # nltk.download('punkt_tab') #UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
@@ -70,84 +75,6 @@ def get_phrases(query):
 
 
 
-
-
-def query_refiner(query):
-    # Print the query to ensure it reaches this point
-    print("Original Query:", query)
-
-    # Configure the API key
-    try:
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-    except Exception as e:
-        print("Error configuring API key:", e)
-        return "ERROR", "Failed to configure API key"
-
-    # Initialize the model with generation configuration
-    generation_config = {
-        "temperature": 0.7,  # Balanced for determinism and variability
-        "top_p": 0.9,       # Focused on high-probability tokens
-        "top_k": 20,        # Limits options to the top-k most likely words
-        "max_output_tokens": 8192,
-        "response_mime_type": "application/json",  # Expect JSON response
-    }
-
-    try:
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash-8b",
-            generation_config=generation_config,
-        )
-    except Exception as e:
-        print("Error initializing the GenerativeModel:", e)
-        return "ERROR", "Failed to initialize the GenerativeModel"
-
-    # Define the prompt template for refining and classifying the query
-    prompt_template = f"""
-    You are an advanced assistant specializing in scientific and technical domains. Your task is to refine, rephrase, or expand a user query so it is more precise and aligned for retrieval of relevant scientific or technical information from a database.
-
-    1. If the query is general knowledge or unrelated to scientific/technical topics, classify it as "GENERAL" and return the query unchanged.
-    2. If the query is scientific/technical in nature:
-       - Rewrite it to make the intent clear and specific.
-       - Expand it if necessary to include additional terms or synonyms that may improve retrieval accuracy.
-       - Add clarifying details if the query seems ambiguous or incomplete.
-       - Avoid altering the core meaning or intent of the original query.
-
-    Respond strictly in JSON format:
-    {{
-      "classification": "[GENERAL/SCIENTIFIC]",
-      "refined_query": "[Your refined query here]"
-    }}
-
-    **Original Query**: "{query}"
-    """
-
-    # Start a chat session and send the message
-    try:
-        chat_session = model.start_chat(history=[])
-        response = chat_session.send_message(prompt_template)
-        output_text = response.text  # Get the raw text response
-        print("Raw Response:", output_text)  # Debug raw response
-
-        # Parse the response as JSON
-        output_json = json.loads(output_text)
-    except Exception as e:
-        print("Error during chat session or message send:", e)
-        return "ERROR", "Failed to process the chat session"
-
-    # Extract values from the JSON response
-    try:
-        classification = output_json.get("classification", "ERROR")
-        refined_query = output_json.get("refined_query", "ERROR")
-    except Exception as e:
-        print("Error extracting values from JSON response:", e)
-        return "ERROR", "Failed to extract values"
-
-    # Print for debugging purposes
-    print("Classification:", classification)
-    print("Refined Query:", refined_query)
-
-    # Return the classification and refined query
-    return classification, refined_query
 
 def generate_citations(paper):
     pdf_path = paper.pdf_file.path
@@ -294,3 +221,91 @@ def fetch_research_papers(query, max_pages=3):
 
     return {"papers": papers}
 
+
+def get_or_create_session(username):
+    user=User.objects.get(username=username)
+    session_obj, created = UserSession.objects.get_or_create(
+        user=user,
+        defaults={"session_id": str(uuid.uuid4())}  # Generate new session ID if not exists
+    )
+    return session_obj.session_id
+
+def get_session_history(session_id):
+    # Retrieve the user session based on the unique session_id
+    user_session = UserSession.objects.get(session_id=session_id)
+    
+    # Use the related name 'chats' to get all Chat objects for the session, ordered by timestamp
+    chats = user_session.chats.order_by("timestamp")
+    
+    # Format chat history as a list of message dictionaries expected by the Gemini API
+    history = []
+    for chat in chats:
+        history.append({"role": "user", "text": chat.question})
+        history.append({"role": "assistant", "text": chat.answer})
+      
+    if len(history) > 30:
+        history = history[-15:]
+
+    return history
+
+
+
+
+
+def refine_query(session_id, query):
+    # Retrieve the conversation history for the given session
+    history_items = get_session_history(session_id)
+    chat_history = "\n".join(
+        f"{item.get('role', 'User').capitalize()}: {item.get('message', '')}"
+        for item in history_items
+    )
+    print(chat_history)
+    
+    # Define the prompt template to instruct the LLM on refining the query
+    prompt_template = PromptTemplate(
+        input_variables=["chat_history", "user_query"],
+        template="""
+### Conversation History:
+{chat_history}
+
+### Raw User Query:
+{user_query}
+
+### Instructions:
+1. Analyze the conversation history to understand the research context.
+2. Identify if the user has referenced specific research articles, topics, or technical terms.
+3. If the query is ambiguous or too terse, refine it by incorporating relevant keywords and context extracted from the history.
+4. Ensure the refined query is concise, clear, and rich in information so that it retrieves the best matching document chunks from research articles.
+5. Output only the refined query without any additional commentary.
+6. If query is general statement and you feel it doesnt need refinement, then give that query as it is.
+
+### Example:
+**Chat History:**
+- User: "Can you explain the findings of the paper on neural networks by Doe et al. 2023?"  
+- AI: "The paper discusses improvements in convolutional neural networks using dropout techniques."
+
+**Raw User Query:**
+"Dropout effectiveness"
+
+**Refined Query Output:**
+"Effectiveness of dropout in enhancing convolutional neural networks as per Doe et al. 2023"
+"""
+    )
+
+    # Configure the Gemini LLM for refining queries with a lower temperature for accuracy.
+    genai_model = GoogleGenerativeAI(
+        model="gemini-1.5-flash",
+        temperature=0.3,
+        top_p=0.9,
+        top_k=30,
+        max_output_tokens=100,
+        google_api_key=settings.GEMINI_API_KEY
+    )
+
+    # Create an LLMChain with the prompt template and the Gemini model.
+    chain = LLMChain(llm=genai_model, prompt=prompt_template)
+
+    # Run the chain with the session's chat history and the raw user query.
+    refined_query = chain.run(chat_history=chat_history, user_query=query)
+
+    return refined_query.strip()

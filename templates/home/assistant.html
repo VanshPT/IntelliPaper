@@ -5,262 +5,340 @@
 {% block explore_topics %}text-gray-500 hover:bg-gray-700 hover:bg-opacity-25 hover:text-gray-100{% endblock %}
 {% block history %}text-gray-100 bg-gray-700 bg-opacity-25{% endblock %}
 {% block css %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/marked.min.js" integrity="sha512-49xmrP3uviO3RLWud0G4giZPhidSGQMjdsX3AkGH0tW4q1FN1nzTa4WGhyKIl+sggfI2q9rB78y/HvVK2HbVnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/lib/marked.esm.js" integrity="sha512-50lTDS1rnOHdbzplG8w87C0xhRuf4f4fvMuGN0FCaFJbji//UOOLDIPnJLEe0glsYYzgMyfzZzKLS/9zzCFMZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/lib/marked.umd.js" integrity="sha512-XRM/dDs+vPBC8GmYAYoIVGQ3j9m1bVQqXMS1bfwJ1cCNBMJt/FCZYHeXj5r9dzUX7FX2/XAEbvo3SAVuIITnaQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
-    .main-container {
-        display: flex;
-        flex-direction: row;
-        height: 100vh;
+    :root {
+        --bg-dark: #0d1017;
+        --bg-darker: #0a0c12;
+        --accent-primary: #ff7f50;
+        --accent-secondary: #ff9c7c;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --gradient-primary: linear-gradient(135deg, #ff7f50 0%, #ff6f61 100%);
     }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
     .chat-container {
-        flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        height: 100vh;
+        background: var(--bg-dark);
+        position: relative;
+    }
+
+    .chat-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.2);
+        display: flex;
+        justify-content: space-between;
         align-items: center;
-        background-color: #0d1017;
-        padding: 20px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
     }
-    .sidebar {
-        width: 250px;
-        background-color: #333;
-        color: #fff;
-        padding: 20px;
-        box-shadow: -4px 0 10px rgba(0, 0, 0, 0.4);
-        overflow-y: auto;
+
+    .chat-title {
+        color: var(--accent-primary);
+        font-size: 1.5rem;
+        font-weight: 600;
     }
-    .sidebar h2 {
-        color: #ff7f50;
-        margin-bottom: 10px;
-        font-weight: bold;
-        font-size:1.5rem;
-    }
-    .chat-item {
-        background-color: #444;
-        color: white;
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 5px;
+
+    .delete-chats-button {
+        background: rgba(255, 127, 80, 0.1);
+        border: 1px solid rgba(255, 127, 80, 0.3);
+        color: var(--accent-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
         cursor: pointer;
-        transition: background-color 0.3s ease;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
-    .chat-item:hover {
-        background-color: #555;
+
+    .delete-chats-button:hover {
+        background: rgba(255, 127, 80, 0.2);
+        border-color: rgba(255, 127, 80, 0.5);
     }
-    .chat-box {
-        width: 100%;
-        background-color: #1a1d2f;
-        border: 2px solid #ff7f50;
-        border-radius: 8px;
-        padding: 20px;
+
+    .chat-messages {
+        flex: 1;
         overflow-y: auto;
-        height: 400px;
-        color: white;
-        font-size: 16px;
-    }
-    .user-input-box {
-    display: flex;
-    width: 100%;
-    margin-top: 20px;
-    align-items: flex-start; /* Align items at the start to prevent button growth */
-}
-
-.input-field {
-    flex: 1;
-    padding: 10px;
-    border: 2px solid #ff7f50;
-    border-radius: 5px;
-    background-color: #2a2d40;
-    color: white;
-    font-size: 16px;
-    resize: none; /* Prevent manual resizing by the user */
-}
-
-.send-btn {
-    margin-left: 10px;
-    padding: 10px 20px;
-    background-color: #ff7f50;
-    border: none;
-    border-radius: 5px;
-    color: #0d1017;
-    font-size: 16px;
-    cursor: pointer;
-    height: 50px; /* Set a fixed height */
-    transition: background-color 0.3s ease;
-}
-.send-btn:hover {
-    background-color: #ff5733;
-}
-
-    .typing-indicator {
-        font-style: italic;
-        color: #ff7f50;
-        margin-bottom: 10px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        background: linear-gradient(45deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
     }
 
-    #second-head{
-        font-size:1.8rem;
-        color: #ff7f50;
-        font-weight:bold;
+    .message {
+        max-width: 75%;
+        padding: 1.25rem;
+        border-radius: 1.25rem;
+        animation: messageAppear 0.3s ease;
+        position: relative;
+        line-height: 1.6;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
+
     .user-message {
-        background-color: #ff7f50; /* Orange background for the query */
-        color: white; /* White text for visibility */
-        font-weight: bold; /* Bold text for the query */
-        padding: 10px; /* Add padding inside the box */
-        border-radius: 10px; /* Rounded corners */
-        margin-top: 10px; /* Space between queries and responses */
-        display: inline-block; /* Prevent box from spanning full width */
+        background: rgba(255, 127, 80, 0.15);
+        border: 1px solid rgba(255, 127, 80, 0.3);
+        border-radius: 1.25rem 0.25rem 1.25rem 1.25rem;
+        margin-left: auto;
     }
 
     .assistant-message {
-        color: white; /* Default white text for assistant responses */
-        margin-top: 10px; /* Space between responses */
+        background: rgba(13, 16, 23, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.25rem 1.25rem 1.25rem 1.25rem;
+        margin-right: auto;
+    }
+
+    .message-content {
+        font-size: 1rem;
+        color: var(--text-primary);
+    }
+
+    .message-timestamp {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 0.5rem;
+        display: block;
+    }
+
+    .input-container {
+        padding: 1.5rem;
+        background: rgba(13, 16, 23, 0.95);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+    }
+
+    .input-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .chat-input {
+        width: 100%;
+        padding: 1.25rem 5rem 1.25rem 1.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 127, 80, 0.3);
+        border-radius: 1.5rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+        resize: none;
+        min-height: 56px;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+    .chat-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(255, 127, 80, 0.3);
+    }
+
+    .send-button {
+        background: var(--gradient-primary);
+        border: none;
+        border-radius: 1rem;
+        padding: 0.75rem 1.5rem;
+        color: var(--bg-dark);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+    }
+
+    .send-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 15px rgba(255, 127, 80, 0.3);
+    }
+
+    .loading-indicator {
+        display: none;
+        position: absolute;
+        right: 1rem;
+        bottom: 4rem;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+
+    @keyframes messageAppear {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--accent-primary);
+        border-radius: 4px;
     }
 </style>
 {% endblock %}
 {% block body %}
-<div class="main-container">
+<div class="chat-container">
+    <div class="chat-header">
+        <div class="chat-title">Research Assistant</div>
+        <button class="delete-chats-button" id="delete-chats-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+            </svg>
+            Delete History
+        </button>
+    </div>
     
-    <!-- Chat area -->
-    <div class="chat-container" style="overflow-y: auto;">
-        <div class="second-head" id="second-head"></div><span id="blinking-cursor">|</span>
-        <div class="chat-box" id="chat-box">
-            <p class="typing-indicator" id="typing-indicator">Assistant is typing...</p>
-            <!-- Chat content will be dynamically inserted here -->
+    <div class="chat-messages" id="chat-messages">
+        <div class="loading-indicator" id="loading-chats">Loading conversation history...</div>
+    </div>
+    
+    <div class="input-container">
+        <div class="input-wrapper">
+            <textarea class="chat-input" id="user-input" placeholder="Type your message..." rows="1"></textarea>
+            <button class="send-button" id="send-button">
+                Send
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-left: 8px;">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
         </div>
-        <div class="user-input-box">
-    <textarea class="input-field" id="user-input" name="query" placeholder="Type your message..." oninput="adjustHeight(this)"></textarea>
-    <button class="send-btn" onclick="sendMessage()">Send</button>
-</div>
-
+        <div class="loading-indicator" id="typing-indicator">Assistant is typing...</div>
     </div>
-    <!-- Sidebar for chat memory -->
-    <div class="sidebar">
-        <h2>Chat History</h2>
-        <div class="chat-item">Chat 1</div>
-        <div class="chat-item">Chat 2</div>
-        <div class="chat-item">Chat 3</div>
-        <!-- Additional chat items can be added here -->
-    </div>
-    
 </div>
 {% endblock %}
 {% block js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
 <script>
-    function adjustHeight(element) {
-        element.style.height = 'auto'; // Reset height to auto
-        element.style.height = element.scrollHeight + 'px'; // Adjust height based on content
-    }
-
-    // Ensure typing indicator is initially hidden
-    document.getElementById('typing-indicator').style.display = 'none';
-
-    function sendMessage() {
-        const userInput = document.getElementById('user-input').value.trim();
-        if (!userInput) return;
-
-        const chatBox = document.getElementById('chat-box');
-
-        // Add the user query to the chat box in a styled orange box
-        const userMessage = document.createElement('div');
-        userMessage.classList.add('user-message'); // Apply the 'user-message' CSS class
-        userMessage.textContent = `You: ${userInput}`;
-        chatBox.appendChild(userMessage);
-
-        // Show typing indicator at the bottom
-        document.getElementById('typing-indicator').style.display = 'block';
-        chatBox.appendChild(document.getElementById('typing-indicator'));
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
-
-        // AJAX POST request to send the user's query and get the response
-        fetch(`/assistant/{{ request.user.username }}/send_query/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}',
+    $(document).ready(function() {
+        // Load chat history on page load
+        $('#loading-chats').show();
+        $.ajax({
+            url: '/assistant/fetch_chat_messages/',
+            type: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(response) {
+                $('#loading-chats').hide();
+                if(response.chats && response.chats.length > 0) {
+                    response.chats.forEach(chat => {
+                        addMessage(chat.question, true);
+                        addMessage(chat.answer, false);
+                    });
+                } else {
+                    $('#chat-messages').append(`
+                        <div class="message assistant-message">
+                            <div class="message-content">
+                                Welcome to your research assistant! How can I help you today?
+                            </div>
+                        </div>
+                    `);
+                }
             },
-            body: JSON.stringify({ query: userInput }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('typing-indicator').style.display = 'none'; // Hide typing indicator
-
-            // Check if the response contains data
-            if (data.error) {
-                console.log("Error:", data.error);
-                const errorMessage = document.createElement('p');
-                errorMessage.innerHTML = `<strong style="color: red;">Error:</strong> ${data.error}`;
-                chatBox.appendChild(errorMessage);
-                return;
+            error: function() {
+                $('#loading-chats').text('Error loading chat history');
             }
-
-            // Add the assistant's response to the chat box
-            const assistantMessage = document.createElement('div');
-            assistantMessage.classList.add('assistant-message'); // Apply the 'assistant-message' CSS class
-            const formattedMessage = formatResponseText(data.message); // Format the response text
-            assistantMessage.innerHTML = `<strong style="color: #ff7f50;">Assistant: </strong>${formattedMessage}`;
-            chatBox.appendChild(assistantMessage);
-
-            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
-        })
-        .catch(error => {
-            console.error("Error in the AJAX request:", error);
-            document.getElementById('typing-indicator').style.display = 'none';
-            const errorMessage = document.createElement('p');
-            errorMessage.innerHTML = `<strong style="color: red;">Error:</strong> Unable to process your request.`;
-            chatBox.appendChild(errorMessage);
         });
 
-        // Clear input field after sending the message
-        document.getElementById('user-input').value = '';
-    }
+        // Auto-resize textarea
+        $('#user-input').on('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
 
-    // Function to format the response text using marked.js
-    function formatResponseText(text) {
-        const converter = new showdown.Converter();
-        const text_html = converter.makeHtml(text);
-        return text_html; 
-    }
-
-    // Function to simulate dynamic typing for the assistant's response
-    function typeText(element, text, duration) {
-        let index = 0;
-        const interval = duration / text.length;
-
-        function typeNextChar() {
-            if (index < text.length) {
-                element.innerHTML += text[index]; // Append the next character
-                index++;
-                setTimeout(typeNextChar, interval);
+        // Delete chat history
+        $('#delete-chats-button').click(function() {
+            if (confirm('Are you sure you want to delete your chat history? This action cannot be undone.')) {
+                $.ajax({
+                    url: '/assistant/delete_chats/',
+                    type: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    success: function() {
+                        $('#chat-messages').html(`
+                            <div class="message assistant-message">
+                                <div class="message-content">
+                                    Chat history cleared. Start a new conversation!
+                                </div>
+                            </div>
+                        `);
+                    },
+                    error: function() {
+                        alert('Error deleting chat history. Please try again.');
+                    }
+                });
             }
-        }
-        typeNextChar();
-    }
-</script>
+        });
+    });
 
-<!-- Script for Blinking Cursor and Typing Animation in Header -->
-<script>
-    function blinkCursor() {
-        const cursor = document.getElementById("blinking-cursor");
-        cursor.style.visibility = (cursor.style.visibility === 'visible') ? 'hidden' : 'visible';
+    function addMessage(content, isUser) {
+        const messagesDiv = $('#chat-messages');
+        const messageClass = isUser ? 'user-message' : 'assistant-message';
+        const formattedContent = marked.parse(content);
+        
+        const messageDiv = `
+            <div class="message ${messageClass}">
+                <div class="message-content">${formattedContent}</div>
+                <span class="message-timestamp">${new Date().toLocaleTimeString()}</span>
+            </div>
+        `;
+        
+        messagesDiv.append(messageDiv);
+        messagesDiv.scrollTop(messagesDiv.prop('scrollHeight'));
     }
-    setInterval(blinkCursor, 500); // Blinking cursor every 500ms
 
-    // Function to type out the 'Your Research Assistant...' text
-    const headerText = "Your Research Assistant at your service.";
-    const typingSpeed = 50;
-    let i = 0;
-    function typeHeaderText() {
-        if (i < headerText.length) {
-            document.getElementById("second-head").textContent += headerText[i];
-            i++;
-            setTimeout(typeHeaderText, typingSpeed);
+    $('#send-button').click(function() {
+        const userInput = $('#user-input');
+        const query = userInput.val().trim();
+        if (!query) return;
+
+        addMessage(query, true);
+        userInput.val('').height('auto');
+        $('#typing-indicator').show();
+
+        $.ajax({
+            url: `/assistant/{{ request.user.username }}/send_query/`,
+            type: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            contentType: 'application/json',
+            data: JSON.stringify({ query: query }),
+            success: function(response) {
+                $('#typing-indicator').hide();
+                if (response.message) {
+                    addMessage(response.message, false);
+                } else {
+                    addMessage('Error: No response received', false);
+                }
+            },
+            error: function(xhr) {
+                $('#typing-indicator').hide();
+                const errorMsg = xhr.responseJSON?.error || 'Unable to process request';
+                addMessage(`Error: ${errorMsg}`, false);
+            }
+        });
+    });
+
+    // Handle Enter key with Shift+Enter for new line
+    $('#user-input').keydown(function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            $('#send-button').click();
         }
-    }
-    typeHeaderText();
+    });
 </script>
 {% endblock %}

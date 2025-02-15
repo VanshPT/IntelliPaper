@@ -68,11 +68,11 @@ joblib==1.4.2
 jsonpatch==1.33
 jsonpointer==3.0.0
 kubernetes==31.0.0
-langchain==0.0.300
+langchain==0.1.300
 langchain-core==0.3.12
 langchain-text-splitters==0.3.0
 langcodes==3.4.1
-langsmith==0.0.92
+langsmith==0.1.125
 language_data==1.2.0
 marisa-trie==1.2.0
 markdown-it-py==3.0.0
