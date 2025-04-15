@@ -725,10 +725,13 @@ def vector_to_bytes(vector):
 
 
 
-# nltk.download('punkt_tab') UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
+
+
 model = SentenceTransformer('all-MiniLM-L6-v2')
 @login_required
 def search_engine(request):
+    # nltk.download('wordnet') #UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
+    # nltk.download('punkt_tab') #UNCOMMENT THESE LINE WHEN RUNNING THE SEARCH ENGINE FOR FIRST TIME
     if request.user:
         user = request.user 
         query = request.GET.get('query')
@@ -904,6 +907,7 @@ def rag_assistant(request, username):
             refined_query = refine_query(session_id, query)
             history= get_session_history(session_id)
             context = get_context(refined_query, 8)
+            print(context)
             # Build the LangChain prompt template with detailed instructions.
             prompt_template = PromptTemplate(
                 input_variables=["chat_history", "context", "user_query"],
