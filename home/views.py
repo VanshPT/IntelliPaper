@@ -819,11 +819,26 @@ def get_context(refined_query, n):
     collection = chroma_client.get_or_create_collection(name="research_papers")
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=n  
+        n_results=n
     )
-    # Extract the text chunks from the results dictionary
-    text_chunks = results.get("documents", [])
+
+    # Chroma returns documents as a list of lists (one per query embedding)
+    raw_docs = results.get("documents", [])
+    if raw_docs and isinstance(raw_docs[0], list):
+        text_chunks = raw_docs[0]
+    else:
+        text_chunks = raw_docs
+
+    # Print in copy-paste-ready form with triple-quotes:
+    print("retrieval_context=[")
+    for chunk in text_chunks:
+        # Escape any """ inside the chunk to avoid breaking the string literal
+        safe = chunk.replace('"""', '\\"\\"\\"')
+        print(f'    """{safe}""",')
+    print("]")
+
     return text_chunks
+
 
 
 @login_required
